@@ -54,8 +54,9 @@ export default function Nav() {
         <a href="#events">Events</a>
         <a href="#gallery">Archive</a>
         <a href="#officers">Board</a>
-        <a href="#join">Join</a>
       </nav>
+
+      <a className="nav__cta" href="#join">Join us</a>
     </header>
   )
 }

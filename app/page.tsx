@@ -16,12 +16,17 @@ export default function Page() {
       <Nav />
       <StoryShell>
         <Hero />
+        <div className="divider" />
         <About />
+        <div className="divider" />
         <Events />
+        <div className="divider" />
         <Gallery />
+        <div className="divider" />
         <Officers />
         <Join />
         <Epigraph />
+        <div className="divider" />
         <Footer />
       </StoryShell>
       <ScrollReveal />

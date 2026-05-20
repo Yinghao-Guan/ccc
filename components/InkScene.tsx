@@ -57,12 +57,12 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
 
   const accentColor = useMemo(() => {
     switch (activeChapter) {
-      case 'events':   return new THREE.Color('#c46d44')
-      case 'gallery':  return new THREE.Color('#d7b888')
-      case 'officers': return new THREE.Color('#8a2922')
-      case 'join':     return new THREE.Color('#d9c19f')
-      case 'epigraph': return new THREE.Color('#efe0c4')
-      default:         return new THREE.Color('#b58a56')
+      case 'events':   return new THREE.Color('#8b3a20')
+      case 'gallery':  return new THREE.Color('#5c3d26')
+      case 'officers': return new THREE.Color('#7B2121')
+      case 'join':     return new THREE.Color('#4a3020')
+      case 'epigraph': return new THREE.Color('#2a1f1a')
+      default:         return new THREE.Color('#3a2a1e')
     }
   }, [activeChapter])
 
