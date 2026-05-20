@@ -8,24 +8,22 @@ import Join from '@/components/Join'
 import Epigraph from '@/components/Epigraph'
 import Footer from '@/components/Footer'
 import ScrollReveal from '@/components/ScrollReveal'
+import StoryShell from '@/components/StoryShell'
 
 export default function Page() {
   return (
     <>
       <Nav />
-      <Hero />
-      <div className="divider" />
-      <About />
-      <div className="divider" />
-      <Events />
-      <div className="divider" />
-      <Gallery />
-      <div className="divider" />
-      <Officers />
-      <Join />
-      <Epigraph />
-      <div className="divider" />
-      <Footer />
+      <StoryShell>
+        <Hero />
+        <About />
+        <Events />
+        <Gallery />
+        <Officers />
+        <Join />
+        <Epigraph />
+        <Footer />
+      </StoryShell>
       <ScrollReveal />
     </>
   )

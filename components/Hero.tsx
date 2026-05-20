@@ -1,44 +1,63 @@
 export default function Hero() {
   return (
-    <section className="hero" id="top" data-screen-label="01 Hero">
-      <div className="hero__bg" aria-hidden="true">
-        <span className="glyph glyph--1">国</span>
-        <span className="glyph glyph--col">
-          <span className="lead">中</span> 国 文 化 社 · 圣 塔 莫 妮 卡
-        </span>
-        <span className="hero__wash"></span>
-      </div>
+    <section
+      className="chapter chapter--hero"
+      id="top"
+      data-story-chapter="hero"
+      data-screen-label="01 Invocation"
+    >
+      <div className="chapter__inner hero-layout">
+        <div className="hero-copy">
+          <p className="hero-kicker reveal d-0">
+            <span>SANTA MONICA COLLEGE</span>
+            <span className="hero-kicker__dot"></span>
+            <span>SCROLL TO FOLLOW THE STROKE</span>
+          </p>
 
-      <div className="hero__inner">
-        <div className="reveal d-0">
-          <p className="hero__eyebrow">SANTA MONICA COLLEGE  ·  A STUDENT SOCIETY SINCE MMXXV</p>
-        </div>
+          <h1 className="hero-title">
+            <span className="reveal d-1">
+              <span>Chinese</span>
+            </span>
+            <span className="reveal d-2">
+              <span>
+                <em>Culture</em> Club
+              </span>
+            </span>
+            <span className="reveal d-3">
+              <span>as a living ritual.</span>
+            </span>
+          </h1>
 
-        <h1 className="hero__title">
-          <span className="reveal d-1"><span>Chinese</span></span>
-          <span className="reveal d-2"><span><span className="em">Culture</span> <span className="amp">&amp;</span></span></span>
-          <span className="reveal d-3"><span>Community.</span></span>
-        </h1>
-
-        <div className="hero__sub-row">
-          <div className="reveal d-4">
-            <p className="hero__cn">中 国 文 化 社 <span className="small">— a quieter way of belonging.</span></p>
-          </div>
-          <div className="reveal d-5">
-            <p className="hero__lede">
-              We are a student society at Santa Monica College devoted to <em>the slow art</em> of Chinese culture &mdash; tea poured carefully, ink set against paper, and friendships that last beyond the semester.
+          <div className="hero-grid">
+            <p className="hero-lede reveal d-4">
+              A student society where tea, calligraphy, festivals, and friendship are staged as
+              one continuous gesture. The page now follows that gesture from its first suspended
+              mark to its final resting line.
             </p>
+
+            <div className="hero-panel reveal d-5">
+              <p className="hero-panel__eyebrow">The Symbol</p>
+              <p className="hero-panel__cn">一 笔 贯 穿</p>
+              <p className="hero-panel__body">
+                One brushstroke crosses every chapter, changing shape as the story turns from
+                invitation to archive to assembly.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="hero__foot">
-          <div className="hero__meta reveal d-5">
-            <div><span className="num">240+</span>active members</div>
-            <div><span className="num">14</span>events / year</div>
-            <div><span className="num">II</span>years of brewing tea</div>
+        <div className="hero-stats reveal d-5">
+          <div>
+            <span className="stat-value">240+</span>
+            <span className="stat-label">members in orbit</span>
           </div>
-          <div className="hero__scroll" aria-hidden="true">
-            Scroll <span className="v-rule"></span>
+          <div>
+            <span className="stat-value">14</span>
+            <span className="stat-label">gatherings a year</span>
+          </div>
+          <div>
+            <span className="stat-value">2025</span>
+            <span className="stat-label">club founded</span>
           </div>
         </div>
       </div>
