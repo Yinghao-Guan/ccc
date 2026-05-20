@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Sparkles, useGLTF } from '@react-three/drei'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import * as THREE from 'three'
 import {
   REST_POSES,
@@ -27,7 +27,9 @@ type InkSceneProps = {
   stateRef: React.RefObject<ScrollState>
 }
 
-const MODEL_BASE_SCALE = 6.5
+// Tuned together with the camera fov so the brush at scale 1.0 reads about
+// the same on-screen size as before the fov widening.
+const MODEL_BASE_SCALE = 8.0
 // Base orientation applied to the GLB so its long axis ends up vertical, tip pointing down.
 // If the model loads in a different default orientation, tune these radians.
 const BASE_EULER = new THREE.Euler(0, 0, 0)
@@ -35,7 +37,7 @@ const BASE_EULER = new THREE.Euler(0, 0, 0)
 function BrushModel({
   handleMaterialsRef,
 }: {
-  handleMaterialsRef: React.RefObject<Map<THREE.Material, THREE.Color>>
+  handleMaterialsRef: RefObject<Map<THREE.Material, THREE.Color>>
 }) {
   const { scene } = useGLTF('/models/chinese-calligraphy-brush/source/Chinese Calligraphy Brush.glb')
 
@@ -116,7 +118,9 @@ function SceneContents({ stateRef }: InkSceneProps) {
       initialised.current = true
     }
 
-    const k = 4.0
+    // Higher damping speed during transitions so the brush actually follows the
+    // dramatic keyframes; gentler at rest for organic settling.
+    const k = scroll?.segment.kind === 'transition' ? 7.0 : 4.5
     const damp = (a: number, b: number) => THREE.MathUtils.damp(a, b, k, delta)
 
     currentPose.current.xFrac = damp(currentPose.current.xFrac, targetPose.xFrac)
@@ -218,7 +222,7 @@ export default function InkScene(props: InkSceneProps) {
   return (
     <div className="scene-layer" aria-hidden="true">
       <Canvas
-        camera={{ position: [0, 0, 8], fov: 38, near: 0.1, far: 60 }}
+        camera={{ position: [0, 0, 8], fov: 46, near: 0.1, far: 60 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
         frameloop={reducedMotion ? 'demand' : 'always'}

@@ -54,76 +54,93 @@ export const REST_POSES: Record<ChapterId, Pose> = {
 const kf = (t: number, pose: Pose) => ({ t, pose })
 
 export const TRANSITIONS: Record<TransitionId, TransitionTrack> = {
-  // Hero (right) → About (left).
-  // The signature arc: brush drifts back-left, sweeps far back, then comes forward huge as it
-  // crosses to the left side, finally settling at About's rest pose.
+  // ─── Hero (right) → About (left) ────────────────────────────────────────
+  // Signature circular arc: brush sweeps back-left into the distance, then
+  // rockets forward HUGE crossing the screen, settles down on the left.
   'hero-to-about': {
     keyframes: [
       kf(0.00, REST_POSES.hero),
-      kf(0.22, { xFrac:  0.30, yFrac:  0.10, z: -2.0, rotation: [ 0.20, -0.10, -0.20], scale: 1.05, accent: '#4a3023' }),
-      kf(0.48, { xFrac: -0.30, yFrac:  0.05, z: -3.6, rotation: [ 0.45, -0.20, -0.55], scale: 1.10, accent: '#4a3023' }),
-      kf(0.70, { xFrac: -0.65, yFrac: -0.05, z:  2.4, rotation: [ 0.15, -0.05, -0.25], scale: 1.20, accent: '#523727' }),
-      kf(0.86, { xFrac: -0.62, yFrac: -0.02, z:  0.6, rotation: [ 0.04,  0,    -0.10], scale: 1.00, accent: '#5c3d26' }),
+      kf(0.14, { xFrac:  0.50, yFrac:  0.20, z: -1.6, rotation: [ 0.35,  0.20, -0.45], scale: 0.95, accent: '#4a3023' }),
+      kf(0.32, { xFrac:  0.10, yFrac:  0.35, z: -4.8, rotation: [ 0.70,  0.40, -0.90], scale: 0.70, accent: '#3e2a1f' }),
+      kf(0.50, { xFrac: -0.30, yFrac:  0.25, z: -5.6, rotation: [ 0.90,  0.20, -1.20], scale: 0.65, accent: '#3e2a1f' }),
+      kf(0.66, { xFrac: -0.55, yFrac: -0.05, z: -2.0, rotation: [ 0.45, -0.10, -1.00], scale: 0.95, accent: '#4a3023' }),
+      kf(0.80, { xFrac: -0.45, yFrac: -0.10, z:  4.6, rotation: [-0.20, -0.10, -0.40], scale: 1.55, accent: '#5c3d26' }),
+      kf(0.92, { xFrac: -0.58, yFrac:  0.00, z:  1.4, rotation: [-0.02,  0,    -0.15], scale: 1.10, accent: '#5c3d26' }),
       kf(1.00, REST_POSES.about),
     ],
   },
 
-  // About (left) → Events (right).
-  // Calligraphic stroke feel: brush dips down (drawing a line) then rises and sweeps right.
+  // ─── About (left) → Events (right) ─────────────────────────────────────
+  // Calligraphic stroke: brush lays nearly flat (tip-forward), dips below the
+  // baseline as if writing across the page, then pops upright on the right.
   'about-to-events': {
     keyframes: [
       kf(0.00, REST_POSES.about),
-      kf(0.18, { xFrac: -0.55, yFrac: -0.30, z:  0.4, rotation: [-0.20, 0,    -0.15], scale: 0.95, accent: '#6b3220' }),
-      kf(0.45, { xFrac:  0.00, yFrac: -0.45, z:  0.8, rotation: [-0.30, 0,     0   ], scale: 1.00, accent: '#7a361d' }),
-      kf(0.72, { xFrac:  0.45, yFrac: -0.20, z:  0.4, rotation: [-0.10, 0,     0.10], scale: 0.92, accent: '#8b3a20' }),
+      kf(0.15, { xFrac: -0.55, yFrac: -0.20, z:  0.6, rotation: [-0.55, 0,    -0.10], scale: 0.95, accent: '#6b3220' }),
+      kf(0.30, { xFrac: -0.40, yFrac: -0.55, z:  1.6, rotation: [-1.25, 0,     0.10], scale: 1.05, accent: '#7a361d' }),
+      kf(0.50, { xFrac:  0.00, yFrac: -0.65, z:  2.2, rotation: [-1.45, 0,     0.30], scale: 1.10, accent: '#8b3a20' }),
+      kf(0.70, { xFrac:  0.40, yFrac: -0.55, z:  1.6, rotation: [-1.25, 0,     0.45], scale: 1.05, accent: '#8b3a20' }),
+      kf(0.86, { xFrac:  0.55, yFrac: -0.15, z:  0.4, rotation: [-0.40, 0,     0.25], scale: 0.92, accent: '#8b3a20' }),
       kf(1.00, REST_POSES.events),
     ],
   },
 
-  // Events (right) → Gallery (small, top-left).
-  // The brush spins around its vertical axis (like flipping a card) and shrinks into the corner.
+  // ─── Events (right) → Gallery (small, top-left) ────────────────────────
+  // Cartwheel: forward tumble (X-axis) carries the brush up and across in a
+  // tall arc, shrinking as it lands in the top-left corner.
   'events-to-gallery': {
     keyframes: [
       kf(0.00, REST_POSES.events),
-      kf(0.25, { xFrac:  0.45, yFrac:  0.10, z:  1.0, rotation: [ 0.05,  0.70,  0.05], scale: 0.95, accent: '#7a361d' }),
-      kf(0.55, { xFrac:  0.05, yFrac:  0.25, z:  0.0, rotation: [ 0.10,  1.60,  0   ], scale: 0.85, accent: '#6a3a23' }),
-      kf(0.80, { xFrac: -0.55, yFrac:  0.25, z: -0.8, rotation: [ 0.05,  2.40, -0.10], scale: 0.72, accent: '#5c3d26' }),
+      kf(0.15, { xFrac:  0.50, yFrac:  0.20, z:  0.6, rotation: [ 0.80,  0.20,  0.10], scale: 0.95, accent: '#7a361d' }),
+      kf(0.32, { xFrac:  0.30, yFrac:  0.55, z:  1.4, rotation: [ 1.80,  0.40,  0   ], scale: 1.05, accent: '#6e3520' }),
+      kf(0.50, { xFrac:  0.00, yFrac:  0.65, z:  1.0, rotation: [ 2.60,  0.50, -0.10], scale: 0.95, accent: '#6a3a23' }),
+      kf(0.68, { xFrac: -0.35, yFrac:  0.55, z:  0.0, rotation: [ 2.20,  0.40, -0.25], scale: 0.85, accent: '#5c3d26' }),
+      kf(0.85, { xFrac: -0.65, yFrac:  0.35, z: -0.8, rotation: [ 1.10,  0.20, -0.20], scale: 0.72, accent: '#5c3d26' }),
       kf(1.00, REST_POSES.gallery),
     ],
   },
 
-  // Gallery (small, top-left) → Officers (right).
-  // Brush emerges from the corner, swells back to full size, sweeps low and right.
+  // ─── Gallery (small, corner) → Officers (right) ────────────────────────
+  // Reveal: brush drops below the frame, swings far back into distance, then
+  // surges forward and right, expanding from tiny to full size.
   'gallery-to-officers': {
     keyframes: [
       kf(0.00, REST_POSES.gallery),
-      kf(0.25, { xFrac: -0.50, yFrac:  0.05, z:  0.4, rotation: [ 0,    0,    -0.10], scale: 0.80, accent: '#6a3225' }),
-      kf(0.55, { xFrac:  0.00, yFrac: -0.25, z:  1.6, rotation: [-0.18, 0,     0   ], scale: 1.05, accent: '#7B2121' }),
-      kf(0.82, { xFrac:  0.50, yFrac: -0.05, z:  0.6, rotation: [-0.08, 0,     0.08], scale: 0.95, accent: '#7B2121' }),
+      kf(0.18, { xFrac: -0.70, yFrac: -0.30, z: -1.5, rotation: [ 0.30, 0,    -0.50], scale: 0.65, accent: '#6a3225' }),
+      kf(0.35, { xFrac: -0.30, yFrac: -0.70, z: -3.5, rotation: [ 0.10, 0.30,-0.20], scale: 0.55, accent: '#6a3225' }),
+      kf(0.55, { xFrac:  0.10, yFrac: -0.55, z: -1.0, rotation: [-0.25, 0.10, 0.05], scale: 0.95, accent: '#7B2121' }),
+      kf(0.72, { xFrac:  0.20, yFrac: -0.15, z:  4.0, rotation: [-0.40, 0,    0   ], scale: 1.45, accent: '#7B2121' }),
+      kf(0.88, { xFrac:  0.50, yFrac:  0.00, z:  1.0, rotation: [-0.10, 0,    0.08], scale: 1.10, accent: '#7B2121' }),
       kf(1.00, REST_POSES.officers),
     ],
   },
 
-  // Officers (right) → Join (left).
-  // Mirror of about→events but going the other way: rises high, dips back down on the left.
+  // ─── Officers (right) → Join (left) ────────────────────────────────────
+  // Toss: brush is thrown in a high arc with an end-over-end tumble, falling
+  // down to land on the left like a pen set down across the page.
   'officers-to-join': {
     keyframes: [
       kf(0.00, REST_POSES.officers),
-      kf(0.22, { xFrac:  0.55, yFrac:  0.30, z:  0.6, rotation: [ 0.20, 0,     0.18], scale: 0.95, accent: '#6a2820' }),
-      kf(0.50, { xFrac:  0.00, yFrac:  0.40, z:  1.2, rotation: [ 0.32, 0,     0   ], scale: 1.05, accent: '#56281f' }),
-      kf(0.78, { xFrac: -0.45, yFrac:  0.15, z:  0.5, rotation: [ 0.12, 0,    -0.12], scale: 1.00, accent: '#4a3020' }),
+      kf(0.14, { xFrac:  0.55, yFrac:  0.40, z:  1.0, rotation: [ 0.80, 0,     0.50], scale: 0.95, accent: '#6a2820' }),
+      kf(0.32, { xFrac:  0.30, yFrac:  0.75, z:  2.2, rotation: [ 1.80, 0,     0.30], scale: 1.00, accent: '#5a2820' }),
+      kf(0.50, { xFrac:  0.00, yFrac:  0.80, z:  2.4, rotation: [ 2.60, 0,     0   ], scale: 0.95, accent: '#56281f' }),
+      kf(0.68, { xFrac: -0.30, yFrac:  0.65, z:  1.8, rotation: [ 2.20, 0,    -0.30], scale: 0.92, accent: '#4f2a1f' }),
+      kf(0.84, { xFrac: -0.50, yFrac:  0.20, z:  0.6, rotation: [ 0.80, 0,    -0.30], scale: 1.00, accent: '#4a3020' }),
       kf(1.00, REST_POSES.join),
     ],
   },
 
-  // Join (left) → Epigraph (center, huge, behind).
-  // Brush pulls back to center, grows large, settles centered slightly behind the verse.
+  // ─── Join (left) → Epigraph (center, huge, behind verse) ───────────────
+  // Recede & return: brush pulls way back into the distance shrinking with a
+  // partial tumble, then surges forward to fill the center stage.
   'join-to-epigraph': {
     keyframes: [
       kf(0.00, REST_POSES.join),
-      kf(0.28, { xFrac: -0.30, yFrac:  0.10, z: -1.0, rotation: [ 0.05, 0,    -0.08], scale: 1.05, accent: '#3e2820' }),
-      kf(0.58, { xFrac:  0.00, yFrac:  0.10, z: -2.4, rotation: [ 0,    0,     0   ], scale: 1.25, accent: '#321f1a' }),
-      kf(0.82, { xFrac:  0.00, yFrac:  0.00, z: -0.8, rotation: [ 0,    0,     0   ], scale: 1.35, accent: '#2a1f1a' }),
+      kf(0.18, { xFrac: -0.45, yFrac:  0.25, z: -2.5, rotation: [ 0.30, 0.30,-0.20], scale: 0.85, accent: '#3e2820' }),
+      kf(0.40, { xFrac: -0.10, yFrac:  0.40, z: -6.0, rotation: [ 0.80, 0.80, 0   ], scale: 0.55, accent: '#2f1e1a' }),
+      kf(0.58, { xFrac:  0.20, yFrac:  0.20, z: -4.5, rotation: [ 0.40, 0.50, 0   ], scale: 0.75, accent: '#2f1e1a' }),
+      kf(0.78, { xFrac:  0.00, yFrac:  0.05, z:  3.5, rotation: [-0.15, 0.10, 0   ], scale: 1.55, accent: '#2a1f1a' }),
+      kf(0.92, { xFrac:  0.00, yFrac:  0.00, z:  0.8, rotation: [ 0,    0,    0   ], scale: 1.40, accent: '#2a1f1a' }),
       kf(1.00, REST_POSES.epigraph),
     ],
   },
