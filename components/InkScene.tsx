@@ -1,6 +1,6 @@
 'use client'
 
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Sparkles, useGLTF } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -79,7 +79,7 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
     box.getSize(size)
     box.getCenter(center)
 
-    const targetHeight = 18
+    const targetHeight = 6.4
     const scale = targetHeight / (size.y || 1)
     model.scale.setScalar(scale)
     model.position.set(-center.x * scale, -center.y * scale + targetHeight * 0.4, -center.z * scale)
@@ -136,6 +136,7 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
 }
 
 function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
+  const { camera } = useThree()
   const brushRigRef = useRef<THREE.Group>(null)
   const haloRef = useRef<THREE.Mesh>(null)
   const brushProgress = useRef(0.04)
@@ -162,9 +163,16 @@ function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
     const aheadPoint = pathCurve.getPointAt(Math.min(0.995, brushProgress.current + 0.012))
     const tangent = aheadPoint.clone().sub(brushPoint).normalize()
 
+    // Keep the brush within the visible frustum regardless of zoom or screen size.
+    // Using the camera's own half-width/height ensures these fractions stay stable.
+    // camera.right/top are the un-zoomed frustum bounds; divide by zoom to get
+    // the actual visible world units (e.g. 720/500 = 1.44 on a 1440 px screen).
+    const cam = camera as THREE.OrthographicCamera
+    const hw = cam.right / cam.zoom   // half visible width in world units
+    const hh = cam.top   / cam.zoom   // half visible height in world units
     stagedPoint.current.set(
-      brushPoint.x * 0.34 + 1.05,
-      brushPoint.y * 0.28 + 0.32,
+      brushPoint.x * hw * 0.155 + hw * 0.065,
+      brushPoint.y * hh * 0.22  + hh * 0.12,
       0
     )
 
@@ -241,7 +249,7 @@ export default function InkScene(props: InkSceneProps) {
     <div className="scene-layer" aria-hidden="true">
       <Canvas
         orthographic
-        camera={{ position: [0, 0, 10], zoom: 92 }}
+        camera={{ position: [0, 0, 10], zoom: 500 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
         frameloop={reducedMotion ? 'demand' : 'always'}
