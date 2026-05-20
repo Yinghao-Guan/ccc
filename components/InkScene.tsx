@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Environment, Sparkles, useGLTF } from '@react-three/drei'
+import { Environment, Line, Sparkles, useGLTF } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
@@ -43,6 +43,8 @@ const pathCurve = new THREE.CatmullRomCurve3(
 
 // Stable fallback axis used when tangent is anti-parallel to worldUp
 const FALLBACK_AXIS = new THREE.Vector3(1, 0, 0)
+const MODEL_SCALE = 8
+
 function BrushModel({ activeChapter }: { activeChapter: string }) {
   const { scene } = useGLTF('/models/chinese-calligraphy-brush/source/Chinese Calligraphy Brush.glb')
 
@@ -76,17 +78,7 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
   // One-time geometry/material setup — runs once when the model clone is ready
   useEffect(() => {
     model.updateMatrixWorld(true)
-    const box = new THREE.Box3().setFromObject(model)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-    box.getSize(size)
-    box.getCenter(center)
-
-    const targetHeight = 9
-    const scale = targetHeight / (size.y || 1)
-    model.scale.setScalar(scale)
-    model.position.set(-center.x * scale, -center.y * scale + targetHeight * 0.4, -center.z * scale)
-    model.rotation.set(0, 0, Math.PI)
+    model.scale.setScalar(MODEL_SCALE)
 
     origColors.current.clear()
 
@@ -131,11 +123,7 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
     })
   }, [model, accentColor])
 
-  return (
-    <group rotation={[0, 0, Math.PI / 2]}>
-      <primitive object={model} />
-    </group>
-  )
+  return <primitive object={model} />
 }
 
 function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
@@ -150,11 +138,28 @@ function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
     new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI * 0.52, 0, 0))
   )
   const swayQuaternion = useRef(new THREE.Quaternion())
+  const pathPoints = useMemo(() => {
+    const points = pathCurve.getSpacedPoints(180)
+    return points.map((point) => new THREE.Vector3(point.x, point.y, 0))
+  }, [])
 
   // Bug 4 fix: sync scroll value to a ref so useFrame always reads the latest
   // value without depending on closure capture timing
   const overallProgressRef = useRef(overallProgress)
   overallProgressRef.current = overallProgress
+
+  const mappedPathPoints = useMemo(() => {
+    const cam = camera as THREE.OrthographicCamera
+    const hw = cam.right / PATH_LAYOUT_ZOOM
+    const hh = cam.top / PATH_LAYOUT_ZOOM
+    return pathPoints.map((point) => (
+      new THREE.Vector3(
+        point.x * hw * 0.155 + hw * 0.065,
+        point.y * hh * 0.22 + hh * 0.12 + 0.16,
+        0.18
+      )
+    ))
+  }, [camera, pathPoints])
 
   useFrame((state, delta) => {
     if (!haloRef.current || !brushRigRef.current) return
@@ -221,6 +226,8 @@ function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
         <meshBasicMaterial color="#a92f21" transparent opacity={0.08} />
       </mesh>
 
+      <Line points={mappedPathPoints} color="#7B2121" transparent opacity={0.35} lineWidth={1} />
+
       {/* Bug 1 fix: BrushModel uses useGLTF which suspends during load.
           Without Suspense the Canvas throws an unhandled suspension and goes blank. */}
       <group ref={brushRigRef}>
@@ -251,7 +258,7 @@ export default function InkScene(props: InkSceneProps) {
     <div className="scene-layer" aria-hidden="true">
       <Canvas
         orthographic
-        camera={{ position: [0, 0, 10], zoom: 90 }}
+        camera={{ position: [0, 0, 10], zoom: 160 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
         frameloop={reducedMotion ? 'demand' : 'always'}
