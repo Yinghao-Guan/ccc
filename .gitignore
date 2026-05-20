@@ -34,3 +34,12 @@ coverage/
 out/
 next-env.d.ts
 
+# Vibe coding
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# others
+temp/
+test/
+
