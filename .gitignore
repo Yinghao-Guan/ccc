@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build and coverage output
+dist/
+build/
+coverage/
+
+# Tool caches
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
