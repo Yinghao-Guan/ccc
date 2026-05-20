@@ -1,6 +1,7 @@
 export default function Join() {
   return (
-    <section className="join" id="join" data-story-chapter="join" data-screen-label="06 Join">
+    <section className="join" id="join" data-story-chapter="join" data-rest-side="left" data-screen-label="06 Join">
+      <div className="chapter-content">
       <div className="join__inner in">
         <div className="join__copy">
           <h2>Sit down <em>for a while.</em></h2>
@@ -34,6 +35,7 @@ export default function Join() {
             <span className="small">Department of Modern Languages</span>
           </dd>
         </dl>
+      </div>
       </div>
     </section>
   )

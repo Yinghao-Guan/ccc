@@ -1,6 +1,7 @@
 export default function About() {
   return (
-    <section id="about" data-story-chapter="about" data-screen-label="02 About">
+    <section id="about" data-story-chapter="about" data-rest-side="left" data-screen-label="02 About">
+      <div className="chapter-content">
       <div className="wrap">
         <header className="section-head in">
           <p className="section-head__no"><span className="dot"></span>I &nbsp;/&nbsp; About the Club</p>
@@ -45,6 +46,7 @@ export default function About() {
             </div>
           </aside>
         </div>
+      </div>
       </div>
     </section>
   )

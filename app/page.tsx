@@ -9,6 +9,7 @@ import Epigraph from '@/components/Epigraph'
 import Footer from '@/components/Footer'
 import ScrollReveal from '@/components/ScrollReveal'
 import StoryShell from '@/components/StoryShell'
+import Transition from '@/components/Transition'
 
 export default function Page() {
   return (
@@ -16,15 +17,17 @@ export default function Page() {
       <Nav />
       <StoryShell>
         <Hero />
-        <div className="divider" />
+        <Transition from="hero" to="about" />
         <About />
-        <div className="divider" />
+        <Transition from="about" to="events" />
         <Events />
-        <div className="divider" />
+        <Transition from="events" to="gallery" />
         <Gallery />
-        <div className="divider" />
+        <Transition from="gallery" to="officers" />
         <Officers />
+        <Transition from="officers" to="join" />
         <Join />
+        <Transition from="join" to="epigraph" />
         <Epigraph />
         <div className="divider" />
         <Footer />

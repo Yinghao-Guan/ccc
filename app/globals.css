@@ -152,6 +152,50 @@ a { color: inherit; }
 .story-shell { position: relative; z-index: 2; }
 .story-content { position: relative; }
 
+/* ───── STORY TRANSITION (scroll spacer between chapters) ───── */
+.story-transition {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .story-transition { height: 70vh; }
+}
+
+/* ───── CHAPTER CONTENT FADE ─────
+   StoryShell sets --fade on each chapter section:
+     1 = fully visible (rest or far)
+     0 = fully hidden (brush has taken the stage during a transition)
+   The chapter sections themselves remain in flow; only the inner content fades.
+*/
+.chapter-content {
+  --fade: 1;
+  opacity: calc(0.04 + var(--fade) * 0.96);
+  transition: opacity 90ms linear;
+}
+
+[data-rest-side]:not([data-rest-side="center"]) > .chapter-content {
+  /* Subtle translate-in/out cue based on which side the brush sits on.
+     Sections with rest on the right (text on left) shift left as they exit,
+     and vice versa. Center/corner sections don't translate. */
+  transform: translateX(calc(var(--exit-shift, 0px) * (1 - var(--fade))));
+  transition: opacity 90ms linear, transform 200ms cubic-bezier(.2,.7,.2,1);
+}
+
+[data-rest-side="right"] > .chapter-content { --exit-shift: -36px; }
+[data-rest-side="left"]  > .chapter-content { --exit-shift:  36px; }
+
+/* Preserve flex centering on the epigraph when wrapped. */
+.epigraph .chapter-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 /* ───── STORY IDEOGRAM ───── */
 .story-ideogram {
   position: fixed;

@@ -1,6 +1,7 @@
 export default function Events() {
   return (
-    <section id="events" data-story-chapter="events" data-screen-label="03 Events">
+    <section id="events" data-story-chapter="events" data-rest-side="right" data-screen-label="03 Events">
+      <div className="chapter-content">
       <div className="wrap">
         <header className="section-head in">
           <p className="section-head__no"><span className="dot"></span>II &nbsp;/&nbsp; Upcoming Gatherings</p>
@@ -120,6 +121,7 @@ export default function Events() {
             <span className="event__cta">↗</span>
           </a>
         </div>
+      </div>
       </div>
     </section>
   )

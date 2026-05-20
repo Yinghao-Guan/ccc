@@ -1,6 +1,7 @@
 export default function Gallery() {
   return (
-    <section id="gallery" data-story-chapter="gallery" data-screen-label="04 Gallery">
+    <section id="gallery" data-story-chapter="gallery" data-rest-side="corner" data-screen-label="04 Gallery">
+      <div className="chapter-content">
       <div className="wrap">
         <header className="section-head in">
           <p className="section-head__no"><span className="dot"></span>III &nbsp;/&nbsp; Things We Have Done Together</p>
@@ -101,6 +102,7 @@ export default function Gallery() {
             </figcaption>
           </figure>
         </div>
+      </div>
       </div>
     </section>
   )

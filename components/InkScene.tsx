@@ -1,54 +1,44 @@
 'use client'
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Environment, Line, Sparkles, useGLTF } from '@react-three/drei'
+import { Environment, Sparkles, useGLTF } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
+import {
+  REST_POSES,
+  TRANSITIONS,
+  sampleTrack,
+  type ChapterId,
+  type Pose,
+  type TransitionId,
+} from '@/lib/brushChoreography'
 
-type InkSceneProps = {
-  activeChapter: string
-  chapterProgress: number
-  overallProgress: number
+export type SegmentRef =
+  | { kind: 'rest'; chapter: ChapterId }
+  | { kind: 'transition'; id: TransitionId }
+
+export type ScrollState = {
+  segment: SegmentRef
+  localProgress: number
+  narrativeProgress: number
 }
 
-// Keep path framing stable even if the orthographic camera zoom changes.
-// This preserves the original composition that was tuned around zoom 500.
-const PATH_LAYOUT_ZOOM = 500
+type InkSceneProps = {
+  stateRef: React.RefObject<ScrollState>
+}
 
-const pathCurve = new THREE.CatmullRomCurve3(
-  [
-    new THREE.Vector3(-4.8, 2.2, -1.4),
-    new THREE.Vector3(-4.1, 2.5, -1.0),
-    new THREE.Vector3(-3.1, 1.8, -0.2),
-    new THREE.Vector3(-2.2, 0.5, 0.5),
-    new THREE.Vector3(-1.3, -0.8, 0.9),
-    new THREE.Vector3(-0.2, -1.9, 0.8),
-    new THREE.Vector3(1.0, -2.1, 0.4),
-    new THREE.Vector3(2.2, -1.2, -0.1),
-    new THREE.Vector3(3.0, 0.3, -0.5),
-    new THREE.Vector3(3.5, 1.5, -0.9),
-    new THREE.Vector3(2.8, 2.3, -1.0),
-    new THREE.Vector3(1.5, 2.0, -0.6),
-    new THREE.Vector3(0.4, 1.0, 0.2),
-    new THREE.Vector3(-0.3, -0.2, 0.8),
-    new THREE.Vector3(0.3, -1.3, 0.7),
-    new THREE.Vector3(1.8, -1.5, 0.1),
-    new THREE.Vector3(3.4, -0.4, -0.6),
-    new THREE.Vector3(4.4, 0.8, -0.9),
-  ],
-  false,
-  'catmullrom',
-  0.42
-)
+const MODEL_BASE_SCALE = 6.5
+// Base orientation applied to the GLB so its long axis ends up vertical, tip pointing down.
+// If the model loads in a different default orientation, tune these radians.
+const BASE_EULER = new THREE.Euler(0, 0, 0)
 
-// Stable fallback axis used when tangent is anti-parallel to worldUp
-const FALLBACK_AXIS = new THREE.Vector3(1, 0, 0)
-const MODEL_SCALE = 8
-
-function BrushModel({ activeChapter }: { activeChapter: string }) {
+function BrushModel({
+  handleMaterialsRef,
+}: {
+  handleMaterialsRef: React.RefObject<Map<THREE.Material, THREE.Color>>
+}) {
   const { scene } = useGLTF('/models/chinese-calligraphy-brush/source/Chinese Calligraphy Brush.glb')
 
-  // Bug 2 fix: clone hierarchy AND materials so we never mutate the shared GLTF cache
   const model = useMemo(() => {
     const clone = scene.clone(true)
     clone.traverse((child) => {
@@ -60,34 +50,19 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
     return clone
   }, [scene])
 
-  const accentColor = useMemo(() => {
-    switch (activeChapter) {
-      case 'events':   return new THREE.Color('#8b3a20')
-      case 'gallery':  return new THREE.Color('#5c3d26')
-      case 'officers': return new THREE.Color('#7B2121')
-      case 'join':     return new THREE.Color('#4a3020')
-      case 'epigraph': return new THREE.Color('#2a1f1a')
-      default:         return new THREE.Color('#3a2a1e')
-    }
-  }, [activeChapter])
-
-  // Bug 3 fix: store each 笔杆 material's original color so the accent lerp
-  // always starts from the same base regardless of how many chapters have passed
-  const origColors = useRef<Map<THREE.Material, THREE.Color>>(new Map())
-
-  // One-time geometry/material setup — runs once when the model clone is ready
   useEffect(() => {
     model.updateMatrixWorld(true)
-    model.scale.setScalar(MODEL_SCALE)
+    model.rotation.copy(BASE_EULER)
+    model.scale.setScalar(1)
 
-    origColors.current.clear()
+    const handleColors = handleMaterialsRef.current
+    handleColors.clear()
 
     model.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
       child.castShadow = false
       child.receiveShadow = false
       child.frustumCulled = false
-
       const mats = Array.isArray(child.material) ? child.material : [child.material]
       mats.forEach((mat) => {
         if (!(mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial)) return
@@ -96,148 +71,134 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
         mat.transparent = false
         mat.side = THREE.DoubleSide
         mat.needsUpdate = true
-
-        // Capture original color before any accent is applied
-        if (!origColors.current.has(mat)) {
-          origColors.current.set(mat, mat.color.clone())
-        }
-      })
-    })
-  }, [model])
-
-  // Per-chapter accent: reset to the captured original before lerping to avoid accumulation
-  useEffect(() => {
-    model.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return
-      const mats = Array.isArray(child.material) ? child.material : [child.material]
-      mats.forEach((mat) => {
-        if (!(mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial)) return
         if (mat.name.includes('笔杆') || child.name.includes('笔杆')) {
-          const orig = origColors.current.get(mat)
-          if (orig) {
-            mat.color.copy(orig).lerp(accentColor, 0.22)
-            mat.needsUpdate = true
-          }
+          handleColors.set(mat, mat.color.clone())
         }
       })
     })
-  }, [model, accentColor])
+  }, [model, handleMaterialsRef])
 
   return <primitive object={model} />
 }
 
-function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
-  const { camera } = useThree()
+function SceneContents({ stateRef }: InkSceneProps) {
+  const { camera, viewport } = useThree()
   const brushRigRef = useRef<THREE.Group>(null)
   const haloRef = useRef<THREE.Mesh>(null)
-  const brushProgress = useRef(0.04)
-  const stagedPoint = useRef(new THREE.Vector3())
-  const worldUp = useRef(new THREE.Vector3(0, 1, 0))
-  const targetQuaternion = useRef(new THREE.Quaternion())
-  const tiltQuaternion = useRef(
-    new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI * 0.52, 0, 0))
-  )
-  const swayQuaternion = useRef(new THREE.Quaternion())
-  const pathPoints = useMemo(() => {
-    const points = pathCurve.getSpacedPoints(180)
-    return points.map((point) => new THREE.Vector3(point.x, point.y, 0))
-  }, [])
+  const handleMaterialsRef = useRef<Map<THREE.Material, THREE.Color>>(new Map())
 
-  // Bug 4 fix: sync scroll value to a ref so useFrame always reads the latest
-  // value without depending on closure capture timing
-  const overallProgressRef = useRef(overallProgress)
-  overallProgressRef.current = overallProgress
-
-  const mappedPathPoints = useMemo(() => {
-    const cam = camera as THREE.OrthographicCamera
-    const hw = cam.right / PATH_LAYOUT_ZOOM
-    const hh = cam.top / PATH_LAYOUT_ZOOM
-    return pathPoints.map((point) => (
-      new THREE.Vector3(
-        point.x * hw * 0.155 + hw * 0.065,
-        point.y * hh * 0.22 + hh * 0.12 + 0.16,
-        0.18
-      )
-    ))
-  }, [camera, pathPoints])
+  const currentPose = useRef<Pose>({ ...REST_POSES.hero, rotation: [...REST_POSES.hero.rotation] as [number, number, number] })
+  const currentAccent = useRef(new THREE.Color(REST_POSES.hero.accent))
+  const targetAccent = useRef(new THREE.Color(REST_POSES.hero.accent))
+  const tempColor = useRef(new THREE.Color())
+  const initialised = useRef(false)
 
   useFrame((state, delta) => {
-    if (!haloRef.current || !brushRigRef.current) return
+    const rig = brushRigRef.current
+    if (!rig) return
 
-    const targetT = THREE.MathUtils.clamp(overallProgressRef.current * 0.94 + 0.03, 0.03, 0.97)
-    brushProgress.current = THREE.MathUtils.damp(brushProgress.current, targetT, 4.2, delta)
+    const scroll = stateRef.current
+    const seg = scroll?.segment ?? { kind: 'rest', chapter: 'hero' as ChapterId }
+    const lp = scroll?.localProgress ?? 0
 
-    const brushPoint = pathCurve.getPointAt(brushProgress.current)
-    const aheadPoint = pathCurve.getPointAt(Math.min(0.995, brushProgress.current + 0.012))
-    const tangent = aheadPoint.clone().sub(brushPoint).normalize()
+    const targetPose: Pose =
+      seg.kind === 'rest'
+        ? REST_POSES[seg.chapter]
+        : sampleTrack(TRANSITIONS[seg.id], lp)
 
-    // Map the curve into a stable world-space layout. We still respond to screen size
-    // through the orthographic frustum, but we intentionally decouple the path from the
-    // live camera zoom so changing zoom only changes framing, not the brush trajectory.
-    const cam = camera as THREE.OrthographicCamera
-    const hw = cam.right / PATH_LAYOUT_ZOOM
-    const hh = cam.top   / PATH_LAYOUT_ZOOM
-    stagedPoint.current.set(
-      brushPoint.x * hw * 0.155 + hw * 0.065,
-      brushPoint.y * hh * 0.22  + hh * 0.12,
-      0
-    )
-
-    // Bug 5 fix: setFromUnitVectors(up, tangent) produces a degenerate quaternion
-    // when tangent ≈ (0, -1, 0) (anti-parallel to worldUp). Guard with dot product.
-    const dot = worldUp.current.dot(tangent)
-    if (dot < -0.9999) {
-      targetQuaternion.current.setFromAxisAngle(FALLBACK_AXIS, Math.PI)
-    } else {
-      targetQuaternion.current.setFromUnitVectors(worldUp.current, tangent)
+    if (!initialised.current) {
+      currentPose.current.xFrac = targetPose.xFrac
+      currentPose.current.yFrac = targetPose.yFrac
+      currentPose.current.z = targetPose.z
+      currentPose.current.scale = targetPose.scale
+      currentPose.current.rotation = [...targetPose.rotation] as [number, number, number]
+      currentAccent.current.set(targetPose.accent)
+      initialised.current = true
     }
 
-    swayQuaternion.current.setFromAxisAngle(
-      tangent,
-      Math.sin(state.clock.elapsedTime * 0.7) * 0.035
-    )
-    targetQuaternion.current.multiply(tiltQuaternion.current)
-    targetQuaternion.current.multiply(swayQuaternion.current)
+    const k = 4.0
+    const damp = (a: number, b: number) => THREE.MathUtils.damp(a, b, k, delta)
 
-    brushRigRef.current.position.copy(stagedPoint.current)
-    brushRigRef.current.quaternion.slerp(targetQuaternion.current, 0.14)
-    brushRigRef.current.position.y += 0.16
-    brushRigRef.current.position.z = 0.18
+    currentPose.current.xFrac = damp(currentPose.current.xFrac, targetPose.xFrac)
+    currentPose.current.yFrac = damp(currentPose.current.yFrac, targetPose.yFrac)
+    currentPose.current.z = damp(currentPose.current.z, targetPose.z)
+    currentPose.current.scale = damp(currentPose.current.scale, targetPose.scale)
+    currentPose.current.rotation[0] = damp(currentPose.current.rotation[0], targetPose.rotation[0])
+    currentPose.current.rotation[1] = damp(currentPose.current.rotation[1], targetPose.rotation[1])
+    currentPose.current.rotation[2] = damp(currentPose.current.rotation[2], targetPose.rotation[2])
 
-    haloRef.current.position.set(
-      Math.sin(state.clock.elapsedTime * 0.12) * 0.35,
-      0.15 + Math.cos(state.clock.elapsedTime * 0.16) * 0.16,
-      -1.8
+    targetAccent.current.set(targetPose.accent)
+    currentAccent.current.lerp(targetAccent.current, 1 - Math.exp(-k * delta))
+
+    // Map normalized viewport coords to world units using the perspective frustum.
+    // viewport.width/height is the visible world size at z=0 (camera-target distance).
+    // At a different z, scale linearly with (focalZ - z) / focalZ.
+    const cam = camera as THREE.PerspectiveCamera
+    const focalZ = cam.position.z
+    const zDist = focalZ - currentPose.current.z
+    const scaleByDist = zDist / focalZ
+    const halfW = (viewport.width / 2) * scaleByDist
+    const halfH = (viewport.height / 2) * scaleByDist
+
+    rig.position.set(
+      currentPose.current.xFrac * halfW,
+      currentPose.current.yFrac * halfH,
+      currentPose.current.z,
     )
-    haloRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.22) * 0.05)
-    haloRef.current.rotation.z += delta * 0.06
+
+    // Tiny idle sway layered on top of pose rotation.
+    const swayX = Math.sin(state.clock.elapsedTime * 0.7) * 0.025
+    const swayZ = Math.cos(state.clock.elapsedTime * 0.55) * 0.020
+
+    rig.rotation.set(
+      currentPose.current.rotation[0] + swayX,
+      currentPose.current.rotation[1],
+      currentPose.current.rotation[2] + swayZ,
+    )
+
+    rig.scale.setScalar(MODEL_BASE_SCALE * currentPose.current.scale)
+
+    const handles = handleMaterialsRef.current
+    handles.forEach((orig, mat) => {
+      const m = mat as THREE.MeshStandardMaterial
+      tempColor.current.copy(orig).lerp(currentAccent.current, 0.28)
+      if (!m.color.equals(tempColor.current)) {
+        m.color.copy(tempColor.current)
+        m.needsUpdate = true
+      }
+    })
+
+    if (haloRef.current) {
+      haloRef.current.position.set(
+        Math.sin(state.clock.elapsedTime * 0.12) * 0.4,
+        0.2 + Math.cos(state.clock.elapsedTime * 0.16) * 0.18,
+        -3.0,
+      )
+      haloRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.22) * 0.05)
+      haloRef.current.rotation.z += delta * 0.06
+    }
   })
 
   return (
     <>
-      <fog attach="fog" args={['#050505', 8, 18]} />
+      <fog attach="fog" args={['#050505', 10, 24]} />
       <ambientLight intensity={0.96} />
       <directionalLight position={[4, 5, 3]} intensity={2.1} color="#fff4db" />
-      <pointLight position={[-5, -2, 4]} intensity={1.1} color="#a1291d" />
+      <pointLight position={[-5, -2, 4]} intensity={1.0} color="#a1291d" />
       <spotLight position={[0, 6, 7]} intensity={1.5} angle={0.4} penumbra={1} color="#ffe8bf" />
 
       <mesh ref={haloRef}>
-        <torusGeometry args={[2.8, 0.08, 20, 96]} />
-        <meshBasicMaterial color="#a92f21" transparent opacity={0.08} />
+        <torusGeometry args={[3.4, 0.09, 20, 96]} />
+        <meshBasicMaterial color="#a92f21" transparent opacity={0.07} />
       </mesh>
 
-      <Line points={mappedPathPoints} color="#7B2121" transparent opacity={0.35} lineWidth={1} />
-
-      {/* Bug 1 fix: BrushModel uses useGLTF which suspends during load.
-          Without Suspense the Canvas throws an unhandled suspension and goes blank. */}
       <group ref={brushRigRef}>
         <Suspense fallback={null}>
-          <BrushModel activeChapter={activeChapter} />
+          <BrushModel handleMaterialsRef={handleMaterialsRef} />
         </Suspense>
       </group>
 
-      <Sparkles count={10} scale={[9, 6, 4]} size={1} speed={0.14} color="#f2d39f" opacity={0.16} />
-
+      <Sparkles count={10} scale={[10, 7, 4]} size={1} speed={0.14} color="#f2d39f" opacity={0.16} />
       <Environment preset="warehouse" />
     </>
   )
@@ -257,8 +218,7 @@ export default function InkScene(props: InkSceneProps) {
   return (
     <div className="scene-layer" aria-hidden="true">
       <Canvas
-        orthographic
-        camera={{ position: [0, 0, 10], zoom: 160 }}
+        camera={{ position: [0, 0, 8], fov: 38, near: 0.1, far: 60 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
         frameloop={reducedMotion ? 'demand' : 'always'}

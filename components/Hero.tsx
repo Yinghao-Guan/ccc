@@ -1,6 +1,7 @@
 export default function Hero() {
   return (
-    <section className="hero" id="top" data-story-chapter="hero" data-screen-label="01 Hero">
+    <section className="hero" id="top" data-story-chapter="hero" data-rest-side="right" data-screen-label="01 Hero">
+      <div className="chapter-content">
       <div className="hero__bg" aria-hidden="true">
         <span className="glyph glyph--1">国</span>
         <span className="glyph glyph--col">
@@ -53,6 +54,7 @@ export default function Hero() {
             Scroll <span className="v-rule"></span>
           </div>
         </div>
+      </div>
       </div>
     </section>
   )

@@ -1,6 +1,7 @@
 export default function Officers() {
   return (
-    <section id="officers" data-story-chapter="officers" data-screen-label="05 Officers">
+    <section id="officers" data-story-chapter="officers" data-rest-side="right" data-screen-label="05 Officers">
+      <div className="chapter-content">
       <div className="wrap">
         <header className="section-head in">
           <p className="section-head__no"><span className="dot"></span>IV &nbsp;/&nbsp; The People Who Make It Run</p>
@@ -107,6 +108,7 @@ export default function Officers() {
             </div>
           </article>
         </div>
+      </div>
       </div>
     </section>
   )

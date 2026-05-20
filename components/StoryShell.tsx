@@ -1,90 +1,174 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import InkScene from '@/components/InkScene'
+import InkScene, { type ScrollState } from '@/components/InkScene'
+import {
+  CHAPTER_IDS,
+  type ChapterId,
+  type TransitionId,
+} from '@/lib/brushChoreography'
 
-const chapterLabels = [
-  ['hero', 'Invocation'],
-  ['about', 'Origins'],
-  ['events', 'Gatherings'],
-  ['gallery', 'Archive'],
-  ['officers', 'Board'],
-  ['join', 'Invitation'],
-  ['epigraph', 'Closing'],
-] as const
-
-type ChapterId = (typeof chapterLabels)[number][0]
+const chapterLabels: Record<ChapterId, string> = {
+  hero: 'Invocation',
+  about: 'Origins',
+  events: 'Gatherings',
+  gallery: 'Archive',
+  officers: 'Board',
+  join: 'Invitation',
+  epigraph: 'Closing',
+}
 
 const chapterMarks: Record<ChapterId, { glyph: string; phrase: string }> = {
-  hero: { glyph: '墨', phrase: '一笔起势' },
-  about: { glyph: '文', phrase: '文化有根' },
-  events: { glyph: '礼', phrase: '相聚成礼' },
-  gallery: { glyph: '集', phrase: '记忆成卷' },
+  hero:     { glyph: '墨', phrase: '一笔起势' },
+  about:    { glyph: '文', phrase: '文化有根' },
+  events:   { glyph: '礼', phrase: '相聚成礼' },
+  gallery:  { glyph: '集', phrase: '记忆成卷' },
   officers: { glyph: '会', phrase: '众手成局' },
-  join: { glyph: '来', phrase: '来者入席' },
+  join:     { glyph: '来', phrase: '来者入席' },
   epigraph: { glyph: '诗', phrase: '落笔成章' },
 }
 
+type RestSeg = { kind: 'rest'; chapter: ChapterId; el: HTMLElement; top: number; bottom: number }
+type TransSeg = { kind: 'transition'; id: TransitionId; from: ChapterId; to: ChapterId; el: HTMLElement; top: number; bottom: number }
+type Seg = RestSeg | TransSeg
+
 export default function StoryShell({ children }: { children: React.ReactNode }) {
   const rootRef = useRef<HTMLElement | null>(null)
+  const scrollStateRef = useRef<ScrollState>({
+    segment: { kind: 'rest', chapter: 'hero' },
+    localProgress: 0,
+    narrativeProgress: 0,
+  })
   const [activeChapter, setActiveChapter] = useState<ChapterId>('hero')
-  const [chapterProgress, setChapterProgress] = useState(0)
-  const [overallProgress, setOverallProgress] = useState(0)
+  const [narrativeProgress, setNarrativeProgress] = useState(0)
 
   useEffect(() => {
-    const update = () => {
+    let rafId: number | null = null
+    let pendingMeasure = true
+    let segments: Seg[] = []
+    const restByChapter = new Map<ChapterId, RestSeg>()
+
+    const buildSegments = (): Seg[] => {
       const root = rootRef.current
-      if (!root) return
-
-      const chapters = Array.from(root.querySelectorAll<HTMLElement>('[data-story-chapter]')).filter(
-        (node) => node.dataset.storyChapter !== 'footer'
+      if (!root) return []
+      const nodes = Array.from(
+        root.querySelectorAll<HTMLElement>('[data-story-chapter], [data-story-transition]'),
       )
-
-      if (!chapters.length) return
-
-      const viewportHeight = window.innerHeight
-      const focusLine = viewportHeight * 0.45
-
-      let closest = chapters[0]
-      let closestDistance = Number.POSITIVE_INFINITY
-
-      chapters.forEach((chapter) => {
-        const rect = chapter.getBoundingClientRect()
-        const center = rect.top + rect.height * 0.5
-        const distance = Math.abs(center - focusLine)
-        if (distance < closestDistance) {
-          closestDistance = distance
-          closest = chapter
+      const out: Seg[] = []
+      restByChapter.clear()
+      for (const el of nodes) {
+        const chapter = el.dataset.storyChapter
+        const transition = el.dataset.storyTransition
+        const rect = el.getBoundingClientRect()
+        const top = rect.top + window.scrollY
+        const bottom = top + rect.height
+        if (chapter && chapter !== 'footer') {
+          const seg: RestSeg = { kind: 'rest', chapter: chapter as ChapterId, el, top, bottom }
+          out.push(seg)
+          restByChapter.set(seg.chapter, seg)
+        } else if (transition) {
+          const from = el.dataset.from as ChapterId
+          const to = el.dataset.to as ChapterId
+          out.push({ kind: 'transition', id: transition as TransitionId, from, to, el, top, bottom })
         }
-      })
-
-      const rect = closest.getBoundingClientRect()
-      const rawProgress = (focusLine - rect.top) / Math.max(rect.height, 1)
-      const boundedProgress = Math.min(1, Math.max(0, rawProgress))
-      const pageProgress =
-        window.scrollY / Math.max(document.documentElement.scrollHeight - viewportHeight, 1)
-
-      setActiveChapter((closest.dataset.storyChapter as ChapterId) ?? 'hero')
-      setChapterProgress(boundedProgress)
-      setOverallProgress(Math.min(1, Math.max(0, pageProgress)))
+      }
+      out.sort((a, b) => a.top - b.top)
+      return out
     }
 
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
+    const findSegment = (focusY: number): Seg => {
+      for (let i = 0; i < segments.length; i++) {
+        const s = segments[i]
+        if (focusY < s.top) return segments[i === 0 ? 0 : i - 1]
+        if (focusY >= s.top && focusY < s.bottom) return s
+      }
+      return segments[segments.length - 1]
+    }
+
+    const update = () => {
+      rafId = null
+      if (pendingMeasure) {
+        segments = buildSegments()
+        pendingMeasure = false
+      }
+      if (!segments.length) return
+
+      const viewportHeight = window.innerHeight
+      const focusY = window.scrollY + viewportHeight * 0.45
+      const pageHeight = Math.max(document.documentElement.scrollHeight - viewportHeight, 1)
+      const narrative = Math.min(1, Math.max(0, window.scrollY / pageHeight))
+
+      const current = findSegment(focusY)
+      const localProgress = Math.min(
+        1,
+        Math.max(0, (focusY - current.top) / Math.max(1, current.bottom - current.top)),
+      )
+
+      scrollStateRef.current.segment =
+        current.kind === 'rest'
+          ? { kind: 'rest', chapter: current.chapter }
+          : { kind: 'transition', id: current.id }
+      scrollStateRef.current.localProgress = localProgress
+      scrollStateRef.current.narrativeProgress = narrative
+
+      // Per-chapter fade: 1 = fully visible, 0 = invisible.
+      // Default to 1; only the from/to chapters of the active transition get reduced fade.
+      for (const s of segments) {
+        if (s.kind === 'rest') s.el.style.setProperty('--fade', '1')
+      }
+      if (current.kind === 'transition') {
+        const fromEl = restByChapter.get(current.from)?.el
+        const toEl = restByChapter.get(current.to)?.el
+        if (fromEl) fromEl.style.setProperty('--fade', (1 - localProgress).toFixed(3))
+        if (toEl) toEl.style.setProperty('--fade', localProgress.toFixed(3))
+      }
+
+      const nextActive: ChapterId =
+        current.kind === 'rest'
+          ? current.chapter
+          : localProgress < 0.5
+            ? current.from
+            : current.to
+
+      setActiveChapter((prev) => (prev === nextActive ? prev : nextActive))
+      setNarrativeProgress((prev) =>
+        Math.abs(prev - narrative) < 0.005 ? prev : narrative,
+      )
+    }
+
+    const schedule = () => {
+      if (rafId != null) return
+      rafId = requestAnimationFrame(update)
+    }
+
+    const onScroll = () => schedule()
+    const onResize = () => {
+      pendingMeasure = true
+      schedule()
+    }
+
+    // ResizeObserver picks up content-height changes (e.g., fonts loading) so chapter rects stay accurate.
+    const ro = new ResizeObserver(() => {
+      pendingMeasure = true
+      schedule()
+    })
+    if (rootRef.current) ro.observe(rootRef.current)
+
+    pendingMeasure = true
+    schedule()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize)
     return () => {
-      window.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
+      if (rafId != null) cancelAnimationFrame(rafId)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+      ro.disconnect()
     }
   }, [])
 
   return (
     <div className="story-shell" data-active-chapter={activeChapter}>
-      <InkScene
-        activeChapter={activeChapter}
-        chapterProgress={chapterProgress}
-        overallProgress={overallProgress}
-      />
+      <InkScene stateRef={scrollStateRef} />
 
       <div className="story-ideogram" aria-hidden="true">
         <span className="story-ideogram__glyph">{chapterMarks[activeChapter].glyph}</span>
@@ -93,15 +177,15 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
 
       <aside className="story-rail" aria-hidden="true">
         <div className="story-rail__line">
-          <span className="story-rail__fill" style={{ transform: `scaleY(${overallProgress || 0.02})` }} />
+          <span className="story-rail__fill" style={{ transform: `scaleY(${narrativeProgress || 0.02})` }} />
         </div>
         <div className="story-rail__labels">
-          {chapterLabels.map(([id, label], index) => (
+          {CHAPTER_IDS.map((id, index) => (
             <span
               className={`story-rail__label${activeChapter === id ? ' is-active' : ''}`}
               key={id}
             >
-              {String(index + 1).padStart(2, '0')} {label}
+              {String(index + 1).padStart(2, '0')} {chapterLabels[id]}
             </span>
           ))}
         </div>
