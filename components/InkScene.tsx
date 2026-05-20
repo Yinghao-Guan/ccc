@@ -21,10 +21,11 @@ export type ScrollState = {
   segment: SegmentRef
   localProgress: number
   narrativeProgress: number
+  theme: 'tea' | 'ink'
 }
 
 type InkSceneProps = {
-  stateRef: React.RefObject<ScrollState>
+  stateRef: RefObject<ScrollState>
 }
 
 // Tuned together with the camera fov so the brush at scale 1.0 reads about
@@ -87,6 +88,8 @@ function SceneContents({ stateRef }: InkSceneProps) {
   const { camera, viewport } = useThree()
   const brushRigRef = useRef<THREE.Group>(null)
   const haloRef = useRef<THREE.Mesh>(null)
+  const haloMatRef = useRef<THREE.MeshBasicMaterial>(null)
+  const rimLightRef = useRef<THREE.PointLight>(null)
   const handleMaterialsRef = useRef<Map<THREE.Material, THREE.Color>>(new Map())
 
   const currentPose = useRef<Pose>({ ...REST_POSES.hero, rotation: [...REST_POSES.hero.rotation] as [number, number, number] })
@@ -181,6 +184,14 @@ function SceneContents({ stateRef }: InkSceneProps) {
       haloRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.22) * 0.05)
       haloRef.current.rotation.z += delta * 0.06
     }
+
+    // Halo opacity stays subtle in both themes since the paper is light in both.
+    if (haloMatRef.current) {
+      haloMatRef.current.opacity = THREE.MathUtils.damp(haloMatRef.current.opacity, 0.07, 3.0, delta)
+    }
+    if (rimLightRef.current) {
+      rimLightRef.current.intensity = THREE.MathUtils.damp(rimLightRef.current.intensity, 0, 3.0, delta)
+    }
   })
 
   return (
@@ -193,8 +204,12 @@ function SceneContents({ stateRef }: InkSceneProps) {
 
       <mesh ref={haloRef}>
         <torusGeometry args={[3.4, 0.09, 20, 96]} />
-        <meshBasicMaterial color="#a92f21" transparent opacity={0.07} />
+        <meshBasicMaterial ref={haloMatRef} color="#c75a3a" transparent opacity={0.07} />
       </mesh>
+
+      {/* Rim light that brightens the brush handle on ink chapters so the silhouette
+          stays legible against the dark page. Intensity is tuned in useFrame. */}
+      <pointLight ref={rimLightRef} position={[2, 1, 4]} intensity={0} color="#f5c98a" distance={20} />
 
       <group ref={brushRigRef}>
         <Suspense fallback={null}>

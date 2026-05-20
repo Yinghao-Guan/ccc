@@ -1,6 +1,6 @@
 export default function Gallery() {
   return (
-    <section id="gallery" data-story-chapter="gallery" data-rest-side="corner" data-screen-label="04 Gallery">
+    <section id="gallery" data-story-chapter="gallery" data-rest-side="corner" data-theme="ink" data-screen-label="04 Gallery">
       <div className="chapter-content">
       <div className="wrap">
         <header className="section-head in">

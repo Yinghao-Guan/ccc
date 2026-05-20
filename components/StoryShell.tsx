@@ -18,6 +18,16 @@ const chapterLabels: Record<ChapterId, string> = {
   epigraph: 'Closing',
 }
 
+const themeForChapter: Record<ChapterId, 'tea' | 'ink'> = {
+  hero: 'tea',
+  about: 'ink',
+  events: 'tea',
+  gallery: 'ink',
+  officers: 'tea',
+  join: 'ink',
+  epigraph: 'tea',
+}
+
 const chapterMarks: Record<ChapterId, { glyph: string; phrase: string }> = {
   hero:     { glyph: '墨', phrase: '一笔起势' },
   about:    { glyph: '文', phrase: '文化有根' },
@@ -38,9 +48,17 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
     segment: { kind: 'rest', chapter: 'hero' },
     localProgress: 0,
     narrativeProgress: 0,
+    theme: 'tea',
   })
   const [activeChapter, setActiveChapter] = useState<ChapterId>('hero')
   const [narrativeProgress, setNarrativeProgress] = useState(0)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeForChapter[activeChapter]
+    return () => {
+      delete document.documentElement.dataset.theme
+    }
+  }, [activeChapter])
 
   useEffect(() => {
     let rafId: number | null = null
@@ -110,6 +128,15 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
           : { kind: 'transition', id: current.id }
       scrollStateRef.current.localProgress = localProgress
       scrollStateRef.current.narrativeProgress = narrative
+
+      // Theme follows the chapter the active-marker is on (pivots at t=0.5 in transitions).
+      const pivotChapter: ChapterId =
+        current.kind === 'rest'
+          ? current.chapter
+          : localProgress < 0.5
+            ? current.from
+            : current.to
+      scrollStateRef.current.theme = themeForChapter[pivotChapter]
 
       // Per-chapter fade: 1 = fully visible, 0 = invisible.
       // Default to 1; only the from/to chapters of the active transition get reduced fade.

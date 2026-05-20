@@ -1,6 +1,6 @@
 export default function About() {
   return (
-    <section id="about" data-story-chapter="about" data-rest-side="left" data-screen-label="02 About">
+    <section id="about" data-story-chapter="about" data-rest-side="left" data-theme="ink" data-screen-label="02 About">
       <div className="chapter-content">
       <div className="wrap">
         <header className="section-head in">

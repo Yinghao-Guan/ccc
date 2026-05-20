@@ -1,6 +1,6 @@
 export default function Join() {
   return (
-    <section className="join" id="join" data-story-chapter="join" data-rest-side="left" data-screen-label="06 Join">
+    <section className="join" id="join" data-story-chapter="join" data-rest-side="left" data-theme="ink" data-screen-label="06 Join">
       <div className="chapter-content">
       <div className="join__inner in">
         <div className="join__copy">

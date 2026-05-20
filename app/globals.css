@@ -17,6 +17,28 @@
   --gutter: clamp(20px, 4vw, 56px);
 }
 
+/* ───── INK THEME (水墨画) ─────
+   Activated by StoryShell setting `data-theme="ink"` on <html> for the About,
+   Gallery, and Join chapters. The paper stays light — like xuan paper — and the
+   "ink" character comes from heavy decorative layers (washes, mountains,
+   strokes, seal) painted on top. The palette only shifts subtly: cooler paper,
+   slightly darker ink for contrast. */
+html[data-theme="ink"] {
+  --paper:      #ece5cf;   /* cooler, whiter xuan paper */
+  --paper-deep: #d9cfb1;
+  --paper-edge: #c2b693;
+  --ink:        #0d0a08;   /* deeper, more saturated ink */
+  --ink-soft:   #2a221a;
+  --ink-mute:   #6d5e44;
+  --ink-faint:  #968870;
+}
+
+html { transition: background-color 1000ms ease; }
+
+body {
+  transition: background-color 1000ms ease, color 1000ms ease;
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -43,6 +65,7 @@ body::before {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.10  0 0 0 0 0.09  0 0 0 0 0.07  0 0 0 0.10 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/></svg>");
   opacity: 0.55;
   mix-blend-mode: multiply;
+  transition: opacity 800ms ease;
 }
 
 /* Vignette */
@@ -56,6 +79,63 @@ body::after {
     radial-gradient(80% 60% at 50% 110%, rgba(80,60,30,0.08), transparent 60%);
 }
 
+/* ───── 水墨画 LAYERS ─────
+   Ink chapters add three painted layers ON TOP of the same light paper:
+     • html::before  — wet ink blooms (animated, drifting, multiply-blended)
+     • html::after   — static composition: distant mountains, brush strokes,
+                       and a red seal stamp
+     • body::after also gets a soft ink-rim vignette in ink mode (added below).
+   All three sit behind the brush canvas (z=0 < canvas z=1). */
+html::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 52% 36% at 14% 24%, rgba(14,12,10,0.30), transparent 65%),
+    radial-gradient(ellipse 58% 46% at 80% 64%, rgba(14,12,10,0.22), transparent 70%),
+    radial-gradient(ellipse 62% 30% at 48% 92%, rgba(14,12,10,0.18), transparent 70%),
+    radial-gradient(ellipse 40% 26% at 32% 60%, rgba(14,12,10,0.14), transparent 70%),
+    radial-gradient(ellipse 38% 28% at 68% 22%, rgba(14,12,10,0.16), transparent 68%);
+  filter: blur(34px);
+  mix-blend-mode: multiply;
+  transition: opacity 1500ms ease;
+  animation: inkBloom 36s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+html[data-theme="ink"]::before { opacity: 1; }
+
+@keyframes inkBloom {
+  0%   { transform: translate3d(0, 0, 0) scale(1.00); }
+  50%  { transform: translate3d(-2%, 1.5%, 0) scale(1.05); }
+  100% { transform: translate3d(1.6%, -2%, 0) scale(0.97); }
+}
+
+html::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    /* Top-right composition: vertical & horizontal brush strokes, ink dots, red seal stamp */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'><defs><filter id='w'><feGaussianBlur stdDeviation='1.6'/></filter></defs><path d='M 462 60 Q 452 240 472 420 L 492 420 Q 484 240 482 60 Z' fill='%23111' opacity='0.18' filter='url(%23w)'/><path d='M 268 482 Q 372 472 502 490 L 502 510 Q 372 502 268 502 Z' fill='%23111' opacity='0.16' filter='url(%23w)'/><circle cx='514' cy='452' r='9' fill='%23111' opacity='0.22'/><circle cx='534' cy='470' r='4' fill='%23111' opacity='0.20'/><circle cx='498' cy='448' r='3' fill='%23111' opacity='0.20'/><g transform='translate(504 134) rotate(-5)'><rect x='-24' y='-24' width='48' height='48' fill='%237B2121' opacity='0.85'/><rect x='-20' y='-20' width='40' height='40' fill='none' stroke='%23ede5cf' stroke-width='1.5' opacity='0.92'/><rect x='-2' y='-16' width='4' height='32' fill='%23ede5cf' opacity='0.85'/><rect x='-16' y='-2' width='32' height='4' fill='%23ede5cf' opacity='0.85'/></g></svg>")
+      top right / 38vh 38vh no-repeat,
+    /* Distant mountain silhouettes anchored to the bottom */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 500' preserveAspectRatio='xMidYMax slice'><defs><filter id='m'><feGaussianBlur stdDeviation='3'/></filter></defs><path d='M0 360 L70 300 L160 350 L260 250 L380 330 L500 280 L620 340 L760 280 L900 330 L1040 280 L1180 340 L1320 290 L1460 340 L1600 310 L1600 500 L0 500 Z' fill='%23111' opacity='0.10' filter='url(%23m)'/><path d='M0 420 L120 360 L240 410 L380 340 L520 400 L660 350 L800 400 L940 340 L1080 390 L1220 350 L1360 400 L1500 360 L1600 390 L1600 500 L0 500 Z' fill='%23111' opacity='0.16' filter='url(%23m)'/><path d='M0 470 L100 420 L220 460 L350 410 L490 450 L640 420 L780 450 L920 420 L1060 450 L1200 420 L1340 450 L1480 430 L1600 450 L1600 500 L0 500 Z' fill='%23111' opacity='0.24' filter='url(%23m)'/></svg>")
+      bottom center / 100% 38vh no-repeat,
+    /* Lower-left corner brush sweep — a single big curved stroke */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'><defs><filter id='s'><feGaussianBlur stdDeviation='2'/></filter></defs><path d='M 30 320 Q 120 280 220 300 Q 320 320 380 280 L 380 296 Q 320 336 220 316 Q 120 296 30 336 Z' fill='%23111' opacity='0.16' filter='url(%23s)'/><circle cx='80' cy='350' r='6' fill='%23111' opacity='0.22'/><circle cx='60' cy='370' r='3' fill='%23111' opacity='0.20'/></svg>")
+      bottom left / 32vh 32vh no-repeat;
+  transition: opacity 1500ms ease;
+}
+
+html[data-theme="ink"]::after { opacity: 1; }
+
 a { color: inherit; }
 
 /* ───── NAV ───── */
@@ -65,12 +145,14 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: space-between;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  background: linear-gradient(to bottom, rgba(240,231,211,0.92), rgba(240,231,211,0.55));
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--paper) 92%, transparent),
+    color-mix(in srgb, var(--paper) 55%, transparent));
   border-bottom: 1px solid transparent;
-  transition: border-color 400ms ease, background 400ms ease;
+  transition: border-color 400ms ease, background 800ms ease;
 }
 
-.nav.scrolled { border-bottom-color: rgba(26,22,18,0.08); }
+.nav.scrolled { border-bottom-color: color-mix(in srgb, var(--ink) 8%, transparent); }
 
 .nav__brand {
   display: flex; align-items: center; gap: 14px;
@@ -802,7 +884,7 @@ section {
 
 .tile .placeholder-label {
   left: 14px; top: 14px;
-  background: rgba(240,231,211,0.92);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
   backdrop-filter: blur(2px);
 }
 
@@ -816,7 +898,9 @@ section {
 .tile .caption {
   position: absolute; left: 14px; right: 14px; bottom: 14px;
   display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
-  background: linear-gradient(to top, rgba(240,231,211,0.96), rgba(240,231,211,0));
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--paper) 96%, transparent),
+    color-mix(in srgb, var(--paper) 0%, transparent));
   padding: 22px 4px 6px;
 }
 
