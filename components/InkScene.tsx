@@ -11,6 +11,10 @@ type InkSceneProps = {
   overallProgress: number
 }
 
+// Keep path framing stable even if the orthographic camera zoom changes.
+// This preserves the original composition that was tuned around zoom 500.
+const PATH_LAYOUT_ZOOM = 500
+
 const pathCurve = new THREE.CatmullRomCurve3(
   [
     new THREE.Vector3(-4.8, 2.2, -1.4),
@@ -39,7 +43,6 @@ const pathCurve = new THREE.CatmullRomCurve3(
 
 // Stable fallback axis used when tangent is anti-parallel to worldUp
 const FALLBACK_AXIS = new THREE.Vector3(1, 0, 0)
-
 function BrushModel({ activeChapter }: { activeChapter: string }) {
   const { scene } = useGLTF('/models/chinese-calligraphy-brush/source/Chinese Calligraphy Brush.glb')
 
@@ -79,7 +82,7 @@ function BrushModel({ activeChapter }: { activeChapter: string }) {
     box.getSize(size)
     box.getCenter(center)
 
-    const targetHeight = 6.4
+    const targetHeight = 9
     const scale = targetHeight / (size.y || 1)
     model.scale.setScalar(scale)
     model.position.set(-center.x * scale, -center.y * scale + targetHeight * 0.4, -center.z * scale)
@@ -163,13 +166,12 @@ function SceneContents({ activeChapter, overallProgress }: InkSceneProps) {
     const aheadPoint = pathCurve.getPointAt(Math.min(0.995, brushProgress.current + 0.012))
     const tangent = aheadPoint.clone().sub(brushPoint).normalize()
 
-    // Keep the brush within the visible frustum regardless of zoom or screen size.
-    // Using the camera's own half-width/height ensures these fractions stay stable.
-    // camera.right/top are the un-zoomed frustum bounds; divide by zoom to get
-    // the actual visible world units (e.g. 720/500 = 1.44 on a 1440 px screen).
+    // Map the curve into a stable world-space layout. We still respond to screen size
+    // through the orthographic frustum, but we intentionally decouple the path from the
+    // live camera zoom so changing zoom only changes framing, not the brush trajectory.
     const cam = camera as THREE.OrthographicCamera
-    const hw = cam.right / cam.zoom   // half visible width in world units
-    const hh = cam.top   / cam.zoom   // half visible height in world units
+    const hw = cam.right / PATH_LAYOUT_ZOOM
+    const hh = cam.top   / PATH_LAYOUT_ZOOM
     stagedPoint.current.set(
       brushPoint.x * hw * 0.155 + hw * 0.065,
       brushPoint.y * hh * 0.22  + hh * 0.12,
@@ -249,7 +251,7 @@ export default function InkScene(props: InkSceneProps) {
     <div className="scene-layer" aria-hidden="true">
       <Canvas
         orthographic
-        camera={{ position: [0, 0, 10], zoom: 500 }}
+        camera={{ position: [0, 0, 10], zoom: 90 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
         frameloop={reducedMotion ? 'demand' : 'always'}
