@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     'Chinese Culture Club at Santa Monica College — a student society devoted to Chinese culture through tea ceremonies, calligraphy, Lunar New Year, and community open to everyone.',
   authors: [{ name: 'Chinese Culture Club at Santa Monica College' }],
   robots: { index: false, follow: false },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+  },
   openGraph: {
     type: 'website',
     title: 'Chinese Culture Club — Santa Monica College',
