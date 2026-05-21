@@ -87,8 +87,6 @@ function BrushModel({
 function SceneContents({ stateRef }: InkSceneProps) {
   const { camera, viewport } = useThree()
   const brushRigRef = useRef<THREE.Group>(null)
-  const haloRef = useRef<THREE.Mesh>(null)
-  const haloMatRef = useRef<THREE.MeshBasicMaterial>(null)
   const rimLightRef = useRef<THREE.PointLight>(null)
   const handleMaterialsRef = useRef<Map<THREE.Material, THREE.Color>>(new Map())
 
@@ -175,20 +173,6 @@ function SceneContents({ stateRef }: InkSceneProps) {
       }
     })
 
-    if (haloRef.current) {
-      haloRef.current.position.set(
-        Math.sin(state.clock.elapsedTime * 0.12) * 0.4,
-        0.2 + Math.cos(state.clock.elapsedTime * 0.16) * 0.18,
-        -3.0,
-      )
-      haloRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.22) * 0.05)
-      haloRef.current.rotation.z += delta * 0.06
-    }
-
-    // Halo opacity stays subtle in both themes since the paper is light in both.
-    if (haloMatRef.current) {
-      haloMatRef.current.opacity = THREE.MathUtils.damp(haloMatRef.current.opacity, 0.07, 3.0, delta)
-    }
     if (rimLightRef.current) {
       rimLightRef.current.intensity = THREE.MathUtils.damp(rimLightRef.current.intensity, 0, 3.0, delta)
     }
@@ -201,11 +185,6 @@ function SceneContents({ stateRef }: InkSceneProps) {
       <directionalLight position={[4, 5, 3]} intensity={2.1} color="#fff4db" />
       <pointLight position={[-5, -2, 4]} intensity={1.0} color="#a1291d" />
       <spotLight position={[0, 6, 7]} intensity={1.5} angle={0.4} penumbra={1} color="#ffe8bf" />
-
-      <mesh ref={haloRef}>
-        <torusGeometry args={[3.4, 0.09, 20, 96]} />
-        <meshBasicMaterial ref={haloMatRef} color="#c75a3a" transparent opacity={0.07} />
-      </mesh>
 
       {/* Rim light that brightens the brush handle on ink chapters so the silhouette
           stays legible against the dark page. Intensity is tuned in useFrame. */}
