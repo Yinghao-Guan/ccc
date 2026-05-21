@@ -278,6 +278,93 @@ a { color: inherit; }
   width: 100%;
 }
 
+/* ───── BRUSH-AWARE SECTION LAYOUTS ─────
+   On wide screens the brush rests in one half of each chapter; reserve a
+   vertical lane on that side by constraining content to the opposite half.
+   Inner multi-column grids that would be too cramped in the narrow lane
+   collapse to a single column. */
+@media (min-width: 1024px) {
+  /* Brush on right → text anchored to the left.
+     Hero keeps its original full-width design (per design directive); the brush
+     passes through the decorative right-side glyph area without a layout swap. */
+  [data-rest-side="right"]:not(.hero) > .chapter-content {
+    max-width: 64%;
+    margin-right: auto;
+  }
+  /* Brush on left → text anchored to the right. */
+  [data-rest-side="left"] > .chapter-content {
+    max-width: 64%;
+    margin-left: auto;
+  }
+
+  /* About: stack body text and scroll card vertically in the right-hand lane. */
+  [data-rest-side="left"] .about-grid {
+    grid-template-columns: 1fr;
+    gap: clamp(36px, 5vw, 64px);
+  }
+  /* The scroll card is decorative — let it sit at the top of the stack. */
+  [data-rest-side="left"] .about__scroll { order: -1; max-width: 520px; }
+
+  /* Events featured: image atop body, with a wider aspect so the row is not
+     too tall once it occupies a single column. */
+  [data-rest-side="right"] .events-feature {
+    grid-template-columns: 1fr;
+    gap: clamp(24px, 3vw, 40px);
+  }
+  [data-rest-side="right"] .events-feature__img {
+    aspect-ratio: 16 / 7;
+  }
+
+  /* Events list: tighter cell widths so the row fits the narrow lane. */
+  [data-rest-side="right"] .event {
+    grid-template-columns: 84px 1.2fr 1fr 90px 22px;
+    gap: clamp(12px, 1.6vw, 24px);
+  }
+
+  /* Officers: 2-col instead of 3-col when squeezed into the lane. */
+  [data-rest-side="right"] .officers {
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(28px, 4vw, 48px) clamp(24px, 3vw, 40px);
+  }
+
+  /* Join: stack copy and where dl vertically; copy on top reads first. */
+  [data-rest-side="left"] .join__inner {
+    grid-template-columns: 1fr;
+    gap: clamp(36px, 5vw, 72px);
+    align-items: start;
+  }
+
+  /* Hero: keep its bespoke design but trim the meta/scroll cue so they don't
+     extend under the brush at the right edge. */
+  .hero__inner {
+    max-width: min(100%, 1080px);
+    padding-right: clamp(40px, 8vw, 140px);
+  }
+
+  /* Gallery: brush rests small in the top-left corner. Indent the whole grid
+     (and its section header) so the leftmost tiles clear the brush. */
+  [data-rest-side="corner"] .gallery,
+  [data-rest-side="corner"] .section-head {
+    margin-left: clamp(60px, 8vw, 160px);
+  }
+}
+
+/* Epigraph: brush is huge and centered behind the verse. Give the verse a
+   soft paper halo so the text reads on top of the brush silhouette. */
+.epigraph__verse {
+  position: relative;
+  padding: clamp(28px, 4vh, 48px) clamp(40px, 6vw, 96px);
+  background: radial-gradient(ellipse 75% 65% at 50% 50%,
+    color-mix(in srgb, var(--paper) 90%, transparent) 0%,
+    color-mix(in srgb, var(--paper) 70%, transparent) 45%,
+    transparent 75%);
+  border-radius: 12px;
+}
+
+.epigraph__source {
+  position: relative;  /* keep above the brush silhouette too */
+}
+
 /* ───── STORY IDEOGRAM ───── */
 .story-ideogram {
   position: fixed;
