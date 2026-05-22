@@ -247,6 +247,7 @@ a { color: inherit; }
   .story-transition { height: 70vh; }
 }
 
+
 /* ───── CHAPTER CONTENT FADE ─────
    StoryShell sets --fade on each chapter section:
      1 = fully visible (rest or far)
@@ -347,22 +348,6 @@ a { color: inherit; }
   [data-rest-side="corner"] .section-head {
     margin-left: clamp(60px, 8vw, 160px);
   }
-}
-
-/* Epigraph: brush is huge and centered behind the verse. Give the verse a
-   soft paper halo so the text reads on top of the brush silhouette. */
-.epigraph__verse {
-  position: relative;
-  padding: clamp(28px, 4vh, 48px) clamp(40px, 6vw, 96px);
-  background: radial-gradient(ellipse 75% 65% at 50% 50%,
-    color-mix(in srgb, var(--paper) 90%, transparent) 0%,
-    color-mix(in srgb, var(--paper) 70%, transparent) 45%,
-    transparent 75%);
-  border-radius: 12px;
-}
-
-.epigraph__source {
-  position: relative;  /* keep above the brush silhouette too */
 }
 
 /* ───── STORY IDEOGRAM ───── */
@@ -1152,9 +1137,27 @@ section {
 /* ───── EPIGRAPH ───── */
 .epigraph {
   position: relative; z-index: 1;
+  min-height: clamp(520px, 82vh, 820px);
   padding: clamp(72px, 12vh, 140px) var(--gutter);
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center;
+  display: grid;
+  align-items: center;
+}
+
+.epigraph .epigraph__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(104px, 16vw, 220px) minmax(0, 1fr);
+  grid-template-rows: 1fr auto 1fr;
+  grid-template-areas:
+    ". center ."
+    "left center right"
+    ". center credit";
+  column-gap: clamp(12px, 2vw, 36px);
+  row-gap: clamp(20px, 5vh, 56px);
+  align-items: center;
+  width: min(100%, var(--max));
+  min-height: clamp(380px, 60vh, 620px);
+  margin: 0 auto;
+  text-align: left;
 }
 
 .epigraph__rule {
@@ -1163,20 +1166,49 @@ section {
 }
 
 .epigraph__verse {
-  margin: clamp(28px, 4vh, 40px) 0 22px;
+  display: contents;
+  margin: 0;
   font-family: var(--serif-cn); font-weight: 400;
-  font-size: clamp(20px, 2.2vw, 30px);
-  letter-spacing: 0.32em; line-height: 1.8; color: var(--ink);
-  text-wrap: balance; max-width: 22ch;
+  color: var(--ink);
 }
 
 .epigraph__verse .accent { color: var(--seal); }
-.epigraph__verse .lb { display: block; }
+
+.epigraph__line {
+  display: block;
+  font-size: clamp(22px, 2.7vw, 38px);
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.epigraph__line--left {
+  grid-area: left;
+  justify-self: end;
+  text-align: right;
+}
+
+.epigraph__line--right {
+  grid-area: right;
+  justify-self: start;
+  text-align: left;
+}
+
+.epigraph__credit {
+  grid-area: credit;
+  justify-self: start;
+  align-self: start;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
 
 .epigraph__source {
   font-family: var(--serif-display); font-style: italic;
   font-weight: 400; font-size: clamp(13px, 1vw, 15px);
-  letter-spacing: 0.04em; color: var(--ink-mute); margin-top: 6px;
+  letter-spacing: 0.04em; color: var(--ink-mute); margin: 0;
+  max-width: min(18ch, 100%);
+  line-height: 1.35;
 }
 
 /* ───── FOOTER ───── */

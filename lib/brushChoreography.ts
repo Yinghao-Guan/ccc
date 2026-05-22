@@ -55,17 +55,28 @@ const kf = (t: number, pose: Pose) => ({ t, pose })
 
 export const TRANSITIONS: Record<TransitionId, TransitionTrack> = {
   // ─── Hero (right) → About (left) ────────────────────────────────────────
-  // Signature circular arc: brush sweeps back-left into the distance, then
-  // rockets forward HUGE crossing the screen, settles down on the left.
+  // Cinematic circular brushstroke: brush moves forward-right, traces a
+  // clockwise loop with its closest approach to the camera near the apex
+  // (handle nearly filling the screen vertically), then sweeps right→left
+  // painting the About section into view and settling on the left.
   'hero-to-about': {
     keyframes: [
       kf(0.00, REST_POSES.hero),
-      kf(0.14, { xFrac:  0.50, yFrac:  0.20, z: -1.6, rotation: [ 0.35,  0.20, -0.45], scale: 0.95, accent: '#4a3023' }),
-      kf(0.32, { xFrac:  0.10, yFrac:  0.35, z: -4.8, rotation: [ 0.70,  0.40, -0.90], scale: 0.70, accent: '#3e2a1f' }),
-      kf(0.50, { xFrac: -0.30, yFrac:  0.25, z: -5.6, rotation: [ 0.90,  0.20, -1.20], scale: 0.65, accent: '#3e2a1f' }),
-      kf(0.66, { xFrac: -0.55, yFrac: -0.05, z: -2.0, rotation: [ 0.45, -0.10, -1.00], scale: 0.95, accent: '#4a3023' }),
-      kf(0.80, { xFrac: -0.45, yFrac: -0.10, z:  4.6, rotation: [-0.20, -0.10, -0.40], scale: 1.55, accent: '#5c3d26' }),
-      kf(0.92, { xFrac: -0.58, yFrac:  0.00, z:  1.4, rotation: [-0.02,  0,    -0.15], scale: 1.10, accent: '#5c3d26' }),
+      // 1. Forward-right approach, beginning the circular curl.
+      kf(0.12, { xFrac:  0.82, yFrac:  0.12, z:  1.2, rotation: [-0.10, -0.12, -0.22], scale: 1.18, accent: '#46332a' }),
+      // 2. Rising up-right as the loop opens, brush leaning forward.
+      kf(0.24, { xFrac:  0.62, yFrac:  0.42, z:  2.8, rotation: [-0.25, -0.08, -0.32], scale: 1.55, accent: '#4a3023' }),
+      // 3. Top of the arc, sweeping toward center, getting larger.
+      kf(0.36, { xFrac:  0.22, yFrac:  0.55, z:  4.2, rotation: [-0.18,  0,    -0.18], scale: 1.92, accent: '#4a3023' }),
+      // 4. CLOSEST APPROACH — handle near camera, brush nearly vertical,
+      //    top and bottom extending toward the edges of the viewport.
+      kf(0.50, { xFrac: -0.02, yFrac:  0.05, z:  5.9, rotation: [-0.02,  0,    -0.02], scale: 2.35, accent: '#5c3d26' }),
+      // 5. Second half — brush starts the right→left sweep that paints About.
+      kf(0.62, { xFrac: -0.22, yFrac:  0.18, z:  4.6, rotation: [ 0.05,  0.05,  0.08], scale: 1.95, accent: '#5c3d26' }),
+      // 6. Continuing left, easing back from the camera.
+      kf(0.74, { xFrac: -0.42, yFrac:  0.15, z:  2.8, rotation: [ 0.06,  0.05, -0.02], scale: 1.55, accent: '#5c3d26' }),
+      // 7. Settling toward About rest on the left.
+      kf(0.88, { xFrac: -0.55, yFrac:  0.05, z:  1.0, rotation: [ 0.02,  0.02, -0.06], scale: 1.18, accent: '#5c3d26' }),
       kf(1.00, REST_POSES.about),
     ],
   },

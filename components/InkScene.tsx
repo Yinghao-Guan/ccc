@@ -84,6 +84,127 @@ function BrushModel({
   return <primitive object={model} />
 }
 
+// ── Ink-wash trail ──
+// Generates a soft black ink "blob" texture procedurally on the canvas, with
+// irregular splotches and a few small droplets around the rim for a wet-ink
+// feel. Drawn once per session and shared across all trail sprites.
+function makeInkTexture(): THREE.Texture {
+  if (typeof document === 'undefined') return new THREE.Texture()
+  const c = document.createElement('canvas')
+  c.width = 256
+  c.height = 256
+  const ctx = c.getContext('2d')!
+  // Soft radial body
+  const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 118)
+  grad.addColorStop(0.00, 'rgba(0,0,0,0.78)')
+  grad.addColorStop(0.32, 'rgba(8,6,5,0.46)')
+  grad.addColorStop(0.62, 'rgba(8,6,5,0.20)')
+  grad.addColorStop(1.00, 'rgba(0,0,0,0)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 256, 256)
+  // Irregular splotches: simulate wet-paper bleed
+  for (let i = 0; i < 28; i++) {
+    const a = Math.random() * Math.PI * 2
+    const r = Math.sqrt(Math.random()) * 100
+    const x = 128 + Math.cos(a) * r
+    const y = 128 + Math.sin(a) * r
+    const rr = 3 + Math.random() * 16
+    const alpha = 0.04 + Math.random() * 0.18
+    ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(3)})`
+    ctx.beginPath()
+    ctx.arc(x, y, rr, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Tiny rim droplets
+  for (let i = 0; i < 7; i++) {
+    const a = Math.random() * Math.PI * 2
+    const r = 92 + Math.random() * 26
+    const x = 128 + Math.cos(a) * r
+    const y = 128 + Math.sin(a) * r
+    const rr = 1.5 + Math.random() * 3
+    ctx.fillStyle = `rgba(0,0,0,${(0.18 + Math.random() * 0.18).toFixed(3)})`
+    ctx.beginPath()
+    ctx.arc(x, y, rr, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  const tex = new THREE.CanvasTexture(c)
+  tex.minFilter = THREE.LinearFilter
+  tex.magFilter = THREE.LinearFilter
+  tex.anisotropy = 4
+  return tex
+}
+
+const TRAIL_POOL_SIZE = 36
+
+type TrailMark = {
+  position: THREE.Vector3
+  birth: number
+  life: number
+  maxAlpha: number
+  startScale: number
+  rotation: number
+  visible: boolean
+}
+
+function InkTrail({
+  marksRef,
+  texture,
+}: {
+  marksRef: RefObject<TrailMark[]>
+  texture: THREE.Texture
+}) {
+  const spriteRefs = useRef<(THREE.Sprite | null)[]>([])
+
+  useFrame((state) => {
+    const marks = marksRef.current
+    if (!marks) return
+    const now = state.clock.elapsedTime
+    for (let i = 0; i < TRAIL_POOL_SIZE; i++) {
+      const sprite = spriteRefs.current[i]
+      const m = marks[i]
+      if (!sprite) continue
+      if (!m || !m.visible) { sprite.visible = false; continue }
+      const age = now - m.birth
+      if (age >= m.life) {
+        m.visible = false
+        sprite.visible = false
+        continue
+      }
+      const t = age / m.life
+      // Fade slow-then-fast so the trail lingers like wet ink before drying.
+      const fade = 1 - Math.pow(t, 1.6)
+      sprite.visible = true
+      sprite.position.copy(m.position)
+      const scale = m.startScale * (1 + t * 0.45)
+      sprite.scale.set(scale, scale, 1)
+      const mat = sprite.material as THREE.SpriteMaterial
+      mat.opacity = fade * m.maxAlpha
+      mat.rotation = m.rotation
+    }
+  })
+
+  return (
+    <>
+      {Array.from({ length: TRAIL_POOL_SIZE }).map((_, i) => (
+        <sprite
+          key={i}
+          ref={(el) => { spriteRefs.current[i] = el }}
+          visible={false}
+        >
+          <spriteMaterial
+            attach="material"
+            map={texture}
+            transparent
+            depthWrite={false}
+            opacity={0}
+            color="#0a0805"
+          />
+        </sprite>
+      ))}
+    </>
+  )
+}
+
 function SceneContents({ stateRef }: InkSceneProps) {
   const { camera, viewport } = useThree()
   const brushRigRef = useRef<THREE.Group>(null)
@@ -95,6 +216,20 @@ function SceneContents({ stateRef }: InkSceneProps) {
   const targetAccent = useRef(new THREE.Color(REST_POSES.hero.accent))
   const tempColor = useRef(new THREE.Color())
   const initialised = useRef(false)
+
+  const inkTexture = useMemo(() => makeInkTexture(), [])
+  const trailMarksRef = useRef<TrailMark[]>(
+    Array.from({ length: TRAIL_POOL_SIZE }, () => ({
+      position: new THREE.Vector3(),
+      birth: 0,
+      life: 0,
+      maxAlpha: 0,
+      startScale: 0,
+      rotation: 0,
+      visible: false,
+    })),
+  )
+  const lastEmitRef = useRef(0)
 
   useFrame((state, delta) => {
     const rig = brushRigRef.current
@@ -163,6 +298,52 @@ function SceneContents({ stateRef }: InkSceneProps) {
 
     rig.scale.setScalar(MODEL_BASE_SCALE * currentPose.current.scale)
 
+    // ── Ink-wash trail emission (hero→about transition only) ──
+    // The trail is placed on the z=0 plane but aligned to the brush's screen
+    // position via xFrac/yFrac so the marks visually trail behind the brush as
+    // it sweeps right→left, regardless of how close the brush is to the camera.
+    const isHeroAbout = scroll?.segment.kind === 'transition' && scroll.segment.id === 'hero-to-about'
+    const marks = trailMarksRef.current
+    const now = state.clock.elapsedTime
+    if (isHeroAbout) {
+      const lpNow = scroll!.localProgress
+      // Emit during the close approach and the painting sweep.
+      if (lpNow >= 0.38 && lpNow <= 0.98) {
+        const emitInterval = 0.045
+        if (now - lastEmitRef.current >= emitInterval) {
+          // Recycle the oldest slot (invisible slots preferred).
+          let slot = -1
+          let oldest = Infinity
+          for (let i = 0; i < TRAIL_POOL_SIZE; i++) {
+            const m = marks[i]
+            if (!m.visible) { slot = i; break }
+            if (m.birth < oldest) { oldest = m.birth; slot = i }
+          }
+          if (slot >= 0) {
+            const m = marks[slot]
+            // Project the brush's xFrac/yFrac onto the z=0 plane so the trail
+            // lives on the "paper" rather than near the camera.
+            const baseX = currentPose.current.xFrac * (viewport.width / 2)
+            const baseY = currentPose.current.yFrac * (viewport.height / 2)
+            const isDroplet = Math.random() < 0.22
+            const jx = (Math.random() - 0.5) * (isDroplet ? 1.4 : 0.55)
+            const jy = (Math.random() - 0.5) * (isDroplet ? 1.0 : 0.40) - 0.10
+            m.position.set(baseX + jx, baseY + jy, 0)
+            m.birth = now
+            m.life = isDroplet ? (0.9 + Math.random() * 0.7) : (1.6 + Math.random() * 1.2)
+            m.maxAlpha = isDroplet ? (0.42 + Math.random() * 0.22) : (0.28 + Math.random() * 0.22)
+            m.startScale = isDroplet ? (0.20 + Math.random() * 0.22) : (0.55 + Math.random() * 0.95)
+            m.rotation = Math.random() * Math.PI * 2
+            m.visible = true
+            lastEmitRef.current = now
+          }
+        }
+      }
+    }
+    // Outside the hero→about transition we simply stop emitting new marks —
+    // existing marks keep aging through InkTrail's useFrame so the trail
+    // tapers off smoothly instead of vanishing at the segment boundary.
+
     const handles = handleMaterialsRef.current
     handles.forEach((orig, mat) => {
       const m = mat as THREE.MeshStandardMaterial
@@ -195,6 +376,8 @@ function SceneContents({ stateRef }: InkSceneProps) {
           <BrushModel handleMaterialsRef={handleMaterialsRef} />
         </Suspense>
       </group>
+
+      <InkTrail marksRef={trailMarksRef} texture={inkTexture} />
 
       <Sparkles count={10} scale={[10, 7, 4]} size={1} speed={0.14} color="#f2d39f" opacity={0.16} />
       <Environment preset="warehouse" />
