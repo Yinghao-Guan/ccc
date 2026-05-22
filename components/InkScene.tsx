@@ -28,6 +28,8 @@ type InkSceneProps = {
   stateRef: RefObject<ScrollState>
 }
 
+const MOBILE_SCENE_QUERY = '(max-width: 720px), (hover: none) and (pointer: coarse)'
+
 // Tuned together with the camera fov so the brush at scale 1.0 reads about
 // the same on-screen size as before the fov widening.
 const MODEL_BASE_SCALE = 8.0
@@ -387,6 +389,7 @@ function SceneContents({ stateRef }: InkSceneProps) {
 
 export default function InkScene(props: InkSceneProps) {
   const [reducedMotion, setReducedMotion] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -395,6 +398,16 @@ export default function InkScene(props: InkSceneProps) {
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_SCENE_QUERY)
+    const update = () => setIsMobile(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  if (isMobile) return null
 
   return (
     <div className="scene-layer" aria-hidden="true">
@@ -409,5 +422,3 @@ export default function InkScene(props: InkSceneProps) {
     </div>
   )
 }
-
-useGLTF.preload('/models/chinese-calligraphy-brush/source/Chinese Calligraphy Brush.glb')
