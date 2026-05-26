@@ -16,9 +16,11 @@ export default function Page() {
     <>
       <Nav />
       <StoryShell>
-        <Hero />
-        <Transition from="hero" to="about" />
-        <About />
+        <div className="ha-stage" data-ha-stage>
+          <Hero />
+          <Transition from="hero" to="about" />
+          <About />
+        </div>
         <Transition from="about" to="events" />
         <Events />
         <Transition from="events" to="gallery" />

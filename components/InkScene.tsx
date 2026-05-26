@@ -22,6 +22,10 @@ export type ScrollState = {
   localProgress: number
   narrativeProgress: number
   theme: 'tea' | 'ink'
+  // Document-space scroll span of the active segment, so the wipe progress can be
+  // recomputed from the live scroll position each frame (synced to paint, no lag).
+  segTop: number
+  segBottom: number
 }
 
 type InkSceneProps = {
@@ -232,6 +236,8 @@ function SceneContents({ stateRef }: InkSceneProps) {
     })),
   )
   const lastEmitRef = useRef(0)
+  const lastSeamRef = useRef(-1)
+  const lastProgressRef = useRef(-1)
 
   useFrame((state, delta) => {
     const rig = brushRigRef.current
@@ -239,7 +245,14 @@ function SceneContents({ stateRef }: InkSceneProps) {
 
     const scroll = stateRef.current
     const seg = scroll?.segment ?? { kind: 'rest', chapter: 'hero' as ChapterId }
-    const lp = scroll?.localProgress ?? 0
+    // Recompute progress from the LIVE scroll position (not the scroll-event-driven
+    // value) so the about counter-scroll stays glued to the page with no frame lag.
+    let lp = scroll?.localProgress ?? 0
+    if (scroll && seg.kind === 'transition') {
+      const focusY = window.scrollY + window.innerHeight * 0.45
+      const span = Math.max(1, scroll.segBottom - scroll.segTop)
+      lp = Math.min(1, Math.max(0, (focusY - scroll.segTop) / span))
+    }
 
     const targetPose: Pose =
       seg.kind === 'rest'
@@ -299,6 +312,46 @@ function SceneContents({ stateRef }: InkSceneProps) {
     )
 
     rig.scale.setScalar(MODEL_BASE_SCALE * currentPose.current.scale)
+
+    // ── Hero→About wipe seam ──
+    // Publish the brush's on-screen x so the CSS clip edge rides exactly where the brush
+    // is (the brush IS the seam). The brush's normalized xFrac equals its NDC x — the
+    // perspective z-scaling cancels: screenX = (xFrac * halfW) / halfW = xFrac — so the
+    // screen fraction from the left is (xFrac + 1) / 2. Short ramps over the first/last
+    // 8% pull the seam to the screen edges (the brush never reaches them) so the wipe
+    // completes without a pop. Rest poses pin it to 1 (hero, full) or 0 (about, cleared).
+    let seam: number
+    if (seg.kind === 'transition' && seg.id === 'hero-to-about') {
+      const bf = (currentPose.current.xFrac + 1) / 2
+      const startEdge = 0.08 // ramp in from the right edge so About doesn't pop in
+      const clearStart = 0.7 // brush has finished its sweep and parks ~20% from the left;
+      const clearEnd = 0.9 //   drive the seam the rest of the way to 0 so Hero fully clears
+      if (lp < startEdge) seam = THREE.MathUtils.lerp(1, bf, lp / startEdge)
+      else if (lp >= clearEnd) seam = 0
+      else if (lp >= clearStart) seam = THREE.MathUtils.lerp(bf, 0, (lp - clearStart) / (clearEnd - clearStart))
+      else seam = bf
+    } else {
+      seam = seg.kind === 'rest' && seg.chapter === 'hero' ? 1 : 0
+    }
+    seam = THREE.MathUtils.clamp(seam, 0, 1)
+    if (Math.abs(seam - lastSeamRef.current) > 0.0005) {
+      document.documentElement.style.setProperty('--ha-seam', seam.toFixed(4))
+      lastSeamRef.current = seam
+    }
+
+    // Drive the About counter-scroll (--ha-progress) and ink-wash fade from the same
+    // live, per-frame progress. Computed here in the render loop (synced to paint) it
+    // cancels scroll exactly, so About sits perfectly still — no jitter.
+    const progress =
+      seg.kind === 'transition' && seg.id === 'hero-to-about'
+        ? lp
+        : seg.kind === 'rest' && seg.chapter === 'hero'
+          ? 0
+          : 1
+    if (Math.abs(progress - lastProgressRef.current) > 0.0005) {
+      document.documentElement.style.setProperty('--ha-progress', progress.toFixed(4))
+      lastProgressRef.current = progress
+    }
 
     // ── Ink-wash trail emission (hero→about transition only) ──
     // The trail is placed on the z=0 plane but aligned to the brush's screen

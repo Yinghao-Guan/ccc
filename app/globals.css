@@ -227,8 +227,11 @@ a { color: inherit; }
 }
 
 /* ───── 3D SCENE LAYER ───── */
+/* z-index 10 sits above the section content (z-index 1) so the brush renders ON TOP of
+   text where they overlap, but stays below the nav (50), rail (20) and ideogram (18).
+   The canvas is transparent except where the brush draws, so only the brush occludes. */
 .scene-layer {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  position: fixed; inset: 0; z-index: 10; pointer-events: none;
 }
 
 .story-shell { position: relative; z-index: 2; }
@@ -280,6 +283,57 @@ a { color: inherit; }
   flex-direction: column;
   align-items: center;
   width: 100%;
+}
+
+/* ───── HERO → ABOUT WIPE (desktop only) ─────
+   The hero→about transition is a stationary clip-path wipe instead of a vertical
+   scroll. Neither section's text moves: Hero is pinned (sticky) and clipped away from
+   the right; About is pulled up + held still via counter-scroll and revealed from the
+   right. The reveal boundary tracks --ha-progress (0→1), published by StoryShell from
+   the same localProgress that drives the 3D brush — so the brush is the moving seam.
+   Guard mirrors the inverse of the mobile query (the brush/transition system is
+   desktop-only); mobile keeps the normal vertical stack. */
+@media (min-width: 721px) and ((hover: hover) or (pointer: fine)) {
+  .ha-stage { position: relative; }
+
+  /* Hero: pinned full-screen, wiped away from the right. The seam is --ha-seam (the
+     brush's on-screen x, published by InkScene), so the wipe edge rides the brush. The
+     clip is ungated and --ha-seam settles to 0 after the wipe, so it persists fully
+     clipped, keeping the still-pinned hero hidden while About is read. Clip lives on the
+     section (full-bleed) so the hero background art isn't cropped at the content gutter. */
+  .ha-stage > .hero {
+    position: sticky;
+    top: 0;
+    clip-path: inset(0 calc((1 - var(--ha-seam, 1)) * 100%) 0 0);
+  }
+
+  /* About: revealed from the right at the brush seam (--ha-seam) while held vertically
+     still. Clip + transform live on the SECTION (full-bleed) — not on .chapter-content,
+     which is constrained to a right-aligned 64% lane — so about's left edge meets hero's
+     right edge exactly at the brush (no gap band). translateY (driven by linear
+     --ha-progress) exactly cancels scroll (spacer is 100vh) and reaches identity at p=1,
+     handing off to normal reading with no jump. Gated to the active transition so reading
+     afterward is fully unclipped/untransformed. */
+  html[data-ha-active] .ha-stage > #about {
+    transform: translateY(calc((1 - var(--ha-progress, 0)) * -100vh));
+    clip-path: inset(0 0 0 calc(var(--ha-seam, 1) * 100%));
+    will-change: transform, clip-path;
+  }
+
+  /* Dark ink wash backdrop fades in/out as a whole, scroll-linked, decoupled from the
+     brush. Outside the transition it reverts to the theme-driven crossfade (0 at hero,
+     1 at about), so the boundaries match seamlessly. */
+  html[data-ha-active]::before,
+  html[data-ha-active]::after {
+    opacity: var(--ha-progress, 0);
+    transition: none;
+  }
+}
+
+/* Reduced motion: drop the wipe entirely, fall back to normal vertical flow. */
+@media (prefers-reduced-motion: reduce) and (min-width: 721px) and ((hover: hover) or (pointer: fine)) {
+  .ha-stage > .hero { position: static; clip-path: none; }
+  html[data-ha-active] .ha-stage > #about { transform: none; clip-path: none; }
 }
 
 /* ───── BRUSH-AWARE SECTION LAYOUTS ─────

@@ -49,6 +49,8 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
     localProgress: 0,
     narrativeProgress: 0,
     theme: 'tea',
+    segTop: 0,
+    segBottom: 1,
   })
   const [activeChapter, setActiveChapter] = useState<ChapterId>('hero')
   const [narrativeProgress, setNarrativeProgress] = useState(0)
@@ -63,6 +65,7 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let rafId: number | null = null
     let pendingMeasure = true
+    let prevHeroAbout = false
     let segments: Seg[] = []
     const restByChapter = new Map<ChapterId, RestSeg>()
 
@@ -149,6 +152,25 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
         if (fromEl) fromEl.style.setProperty('--fade', (1 - localProgress).toFixed(3))
         if (toEl) toEl.style.setProperty('--fade', localProgress.toFixed(3))
       }
+
+      // Hero→About wipe: publish progress (0 before, 1 after) + an active flag so the
+      // CSS clip-path/counter-scroll and the scroll-linked ink wash can read them.
+      // Expose the active segment's scroll span so InkScene can recompute the wipe
+      // progress from the live scroll position each render frame (synced to paint), which
+      // avoids the counter-scroll lag/jitter of a scroll-event-driven CSS variable.
+      scrollStateRef.current.segTop = current.top
+      scrollStateRef.current.segBottom = current.bottom
+
+      const docEl = document.documentElement
+      const isHeroAbout = current.kind === 'transition' && current.id === 'hero-to-about'
+      if (isHeroAbout) docEl.dataset.haActive = ''
+      else delete docEl.dataset.haActive
+
+      // The wipe applies a transform to the measured #about section. If a resize
+      // re-measured it mid-wipe, the rect would be polluted; force a clean re-measure
+      // once the wipe ends and #about is back at identity.
+      if (prevHeroAbout && !isHeroAbout) pendingMeasure = true
+      prevHeroAbout = isHeroAbout
 
       const nextActive: ChapterId =
         current.kind === 'rest'
