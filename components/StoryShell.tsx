@@ -39,6 +39,7 @@ const chapterMarks: Record<ChapterId, { glyph: string; phrase: string }> = {
 }
 
 const HERO_ABOUT_HANDOFF_PROGRESS = 0.88
+const FALLBACK_NAV_OFFSET = 74
 
 type RestSeg = { kind: 'rest'; chapter: ChapterId; el: HTMLElement; top: number; bottom: number }
 type TransSeg = { kind: 'transition'; id: TransitionId; from: ChapterId; to: ChapterId; el: HTMLElement; top: number; bottom: number }
@@ -70,6 +71,9 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
     let prevHeroAbout = false
     let segments: Seg[] = []
     const restByChapter = new Map<ChapterId, RestSeg>()
+
+    const getNavOffset = () =>
+      Math.round(document.querySelector<HTMLElement>('.nav')?.getBoundingClientRect().height ?? FALLBACK_NAV_OFFSET)
 
     const getLayoutTop = (el: HTMLElement): number => {
       let top = 0
@@ -151,10 +155,24 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
 
       const viewportHeight = window.innerHeight
       const focusY = window.scrollY + viewportHeight * 0.45
+      const navOffset = getNavOffset()
+      docEl.style.setProperty('--nav-h', `${navOffset}px`)
       const pageHeight = Math.max(document.documentElement.scrollHeight - viewportHeight, 1)
       const narrative = Math.min(1, Math.max(0, window.scrollY / pageHeight))
 
-      const current = findSegment(focusY)
+      let current = findSegment(focusY)
+      const aboutSeg = restByChapter.get('about')
+      const heroAboutSeg = segments.find(
+        (s): s is TransSeg => s.kind === 'transition' && s.id === 'hero-to-about',
+      )
+      if (
+        aboutSeg &&
+        heroAboutSeg &&
+        focusY >= heroAboutSeg.top &&
+        window.scrollY < aboutSeg.top - navOffset
+      ) {
+        current = heroAboutSeg
+      }
       const localProgress = Math.min(
         1,
         Math.max(0, (focusY - current.top) / Math.max(1, current.bottom - current.top)),

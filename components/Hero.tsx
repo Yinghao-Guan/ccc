@@ -5,7 +5,7 @@ export default function Hero() {
       <div className="hero__bg" aria-hidden="true">
         <span className="glyph glyph--1">国</span>
         <span className="glyph glyph--col">
-          <span className="lead">中</span> 国 文 化 社 · 圣 塔 莫 妮 卡
+          <span className="lead">中</span> 国 文 化 社
         </span>
         <span className="hero__wash"></span>
       </div>

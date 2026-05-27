@@ -303,7 +303,7 @@ a { color: inherit; }
      clip alone let it peek above About while About scrolled up into place. */
   .ha-stage > .hero {
     position: sticky;
-    top: 0;
+    top: var(--nav-h, 74px);
   }
   html[data-ha-phase='wipe'] .ha-stage > .hero {
     clip-path: inset(0 calc((1 - var(--ha-seam, 1)) * 100%) 0 0);
@@ -313,15 +313,12 @@ a { color: inherit; }
     visibility: hidden;
   }
 
-  /* About: held perfectly still during the wipe via position:fixed — pinned by the
-     browser compositor (no main-thread JS), so it cannot jitter against the scroll the
-     way a transform-based counter-scroll does. top:45vh matches its natural arrival
-     framing (the focusY 0.45 bias), so when the wipe ends and it returns to normal flow
-     the position is identical → no jump. Clip lives on the full-bleed section so about's
-     left edge meets hero's right edge exactly at the brush seam (--ha-seam). */
+  /* About: held still during the wipe via position:fixed and released only when its
+     normal layout top reaches the sticky nav. Clip lives on the full-bleed section so
+     about's left edge meets hero's right edge exactly at the brush seam (--ha-seam). */
   html[data-ha-active] .ha-stage > #about {
     position: fixed;
-    top: 45vh;
+    top: var(--nav-h, 74px);
     left: 0;
     right: 0;
     z-index: 2;
@@ -636,6 +633,23 @@ a { color: inherit; }
   35%  { opacity: 1; }
   70%  { transform: scaleY(1); opacity: 1; }
   100% { transform: scaleY(1); opacity: 0; }
+}
+
+/* Desktop: lock hero to exactly one viewport height so nothing requires scrolling within it */
+@media (min-width: 821px) {
+  .hero {
+    min-height: unset;
+    height: calc(100svh - var(--nav-h, 74px));
+    overflow: hidden;
+    padding-top: clamp(32px, 5vh, 72px);
+    padding-bottom: clamp(32px, 5vh, 72px);
+  }
+  .hero__title { font-size: clamp(56px, 9vw, 130px); }
+  .hero__eyebrow { margin-bottom: clamp(16px, 2.5vh, 32px); }
+  .hero__sub-row { margin-top: clamp(20px, 3.5vh, 48px); }
+  .hero__foot { margin-top: clamp(24px, 4vh, 60px); }
+  .hero__bg .glyph--col { white-space: nowrap; }
+
 }
 
 /* ───── SECTION CHROME ───── */
