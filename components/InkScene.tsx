@@ -468,6 +468,9 @@ export default function InkScene(props: InkSceneProps) {
         camera={{ position: [0, 0, 8], fov: 46, near: 0.1, far: 60 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
+        onCreated={({ gl }) => {
+          gl.setClearColor(0x000000, 0)
+        }}
         frameloop={reducedMotion ? 'demand' : 'always'}
       >
         <SceneContents {...props} />

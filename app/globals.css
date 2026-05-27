@@ -232,6 +232,11 @@ a { color: inherit; }
    The canvas is transparent except where the brush draws, so only the brush occludes. */
 .scene-layer {
   position: fixed; inset: 0; z-index: 10; pointer-events: none;
+  background: transparent;
+}
+
+.scene-layer canvas {
+  background: transparent !important;
 }
 
 .story-shell { position: relative; z-index: 2; }
@@ -639,7 +644,8 @@ a { color: inherit; }
 @media (min-width: 821px) {
   .hero {
     min-height: unset;
-    height: calc(100svh - var(--nav-h, 74px));
+    height: calc(100vh - var(--nav-h, 74px));
+    height: calc(100dvh - var(--nav-h, 74px));
     overflow: hidden;
     align-content: center;
     padding-top: clamp(16px, 3vh, 44px);
@@ -649,6 +655,12 @@ a { color: inherit; }
   .hero__eyebrow { margin-bottom: clamp(16px, 2.5vh, 32px); }
   .hero__sub-row { margin-top: clamp(20px, 3.5vh, 48px); }
   .hero__foot { margin-top: clamp(24px, 4vh, 60px); }
+  .hero__bg .glyph--1 {
+    top: 50%;
+    font-size: clamp(260px, min(42vw, 76dvh), 640px);
+    line-height: 1;
+    transform: translateY(-50%);
+  }
   .hero__bg .glyph--col { white-space: nowrap; }
 
 }
