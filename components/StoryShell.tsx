@@ -38,6 +38,8 @@ const chapterMarks: Record<ChapterId, { glyph: string; phrase: string }> = {
   epigraph: { glyph: '诗', phrase: '落笔成章' },
 }
 
+const HERO_ABOUT_HANDOFF_PROGRESS = 0.88
+
 type RestSeg = { kind: 'rest'; chapter: ChapterId; el: HTMLElement; top: number; bottom: number }
 type TransSeg = { kind: 'transition'; id: TransitionId; from: ChapterId; to: ChapterId; el: HTMLElement; top: number; bottom: number }
 type Seg = RestSeg | TransSeg
@@ -69,6 +71,29 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
     let segments: Seg[] = []
     const restByChapter = new Map<ChapterId, RestSeg>()
 
+    const getLayoutTop = (el: HTMLElement): number => {
+      let top = 0
+      let node: HTMLElement | null = el
+      while (node) {
+        top += node.offsetTop
+        node = node.offsetParent as HTMLElement | null
+      }
+      return top
+    }
+
+    const getSegmentTop = (el: HTMLElement): number => {
+      const stage = el.closest<HTMLElement>('[data-ha-stage]')
+      if (!stage || el.parentElement !== stage) return getLayoutTop(el)
+
+      let top = getLayoutTop(stage)
+      for (const child of Array.from(stage.children)) {
+        if (!(child instanceof HTMLElement)) continue
+        if (child === el) return top
+        top += child.offsetHeight
+      }
+      return getLayoutTop(el)
+    }
+
     const buildSegments = (): Seg[] => {
       const root = rootRef.current
       if (!root) return []
@@ -80,9 +105,8 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
       for (const el of nodes) {
         const chapter = el.dataset.storyChapter
         const transition = el.dataset.storyTransition
-        const rect = el.getBoundingClientRect()
-        const top = rect.top + window.scrollY
-        const bottom = top + rect.height
+        const top = getSegmentTop(el)
+        const bottom = top + el.offsetHeight
         if (chapter && chapter !== 'footer') {
           const seg: RestSeg = { kind: 'rest', chapter: chapter as ChapterId, el, top, bottom }
           out.push(seg)
@@ -108,9 +132,20 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
 
     const update = () => {
       rafId = null
-      if (pendingMeasure) {
+      const docEl = document.documentElement
+      const aboutIsFixed = prevHeroAbout && docEl.dataset.haActive != null
+      if (pendingMeasure && !aboutIsFixed) {
         segments = buildSegments()
         pendingMeasure = false
+        // Record About's in-flow height so its placeholder can hold its place while it is
+        // position:fixed during the wipe (keeps page height stable, handoff jump-free).
+        const aboutSeg = restByChapter.get('about')
+        if (aboutSeg) {
+          document.documentElement.style.setProperty(
+            '--about-h',
+            `${Math.round(aboutSeg.bottom - aboutSeg.top)}px`,
+          )
+        }
       }
       if (!segments.length) return
 
@@ -161,10 +196,22 @@ export default function StoryShell({ children }: { children: React.ReactNode }) 
       scrollStateRef.current.segTop = current.top
       scrollStateRef.current.segBottom = current.bottom
 
-      const docEl = document.documentElement
       const isHeroAbout = current.kind === 'transition' && current.id === 'hero-to-about'
       if (isHeroAbout) docEl.dataset.haActive = ''
       else delete docEl.dataset.haActive
+      // Phase gates Hero's visibility: 'hero' = full, 'wipe' = clipped at the seam,
+      // 'about' = hidden. Hero stays sticky-pinned through about-rest, so without this it
+      // peeks above About (which sits ~45% down) while About scrolls up into place. The
+      // final hero-to-about stretch hands off early so readability does not depend on the
+      // Three.js frame loop publishing the final seam before the browser paints.
+      const heroAboutHandedOff = isHeroAbout && localProgress >= HERO_ABOUT_HANDOFF_PROGRESS
+      docEl.dataset.haPhase = isHeroAbout
+        ? heroAboutHandedOff
+          ? 'about'
+          : 'wipe'
+        : current.kind === 'rest' && current.chapter === 'hero'
+          ? 'hero'
+          : 'about'
 
       // The wipe applies a transform to the measured #about section. If a resize
       // re-measured it mid-wipe, the rect would be polluted; force a clean re-measure

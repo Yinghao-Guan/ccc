@@ -296,29 +296,44 @@ a { color: inherit; }
 @media (min-width: 721px) and ((hover: hover) or (pointer: fine)) {
   .ha-stage { position: relative; }
 
-  /* Hero: pinned full-screen, wiped away from the right. The seam is --ha-seam (the
-     brush's on-screen x, published by InkScene), so the wipe edge rides the brush. The
-     clip is ungated and --ha-seam settles to 0 after the wipe, so it persists fully
-     clipped, keeping the still-pinned hero hidden while About is read. Clip lives on the
-     section (full-bleed) so the hero background art isn't cropped at the content gutter. */
+  /* Hero: pinned full-screen. During the wipe it's clipped away at the brush seam
+     (--ha-seam = the brush's on-screen x, published by InkScene, full-bleed so the hero
+     art isn't cropped at the content gutter). Once About takes over ('about' phase) Hero
+     is hidden outright — it stays sticky-pinned through about-rest, so relying on the
+     clip alone let it peek above About while About scrolled up into place. */
   .ha-stage > .hero {
     position: sticky;
     top: 0;
+  }
+  html[data-ha-phase='wipe'] .ha-stage > .hero {
     clip-path: inset(0 calc((1 - var(--ha-seam, 1)) * 100%) 0 0);
   }
-
-  /* About: revealed from the right at the brush seam (--ha-seam) while held vertically
-     still. Clip + transform live on the SECTION (full-bleed) — not on .chapter-content,
-     which is constrained to a right-aligned 64% lane — so about's left edge meets hero's
-     right edge exactly at the brush (no gap band). translateY (driven by linear
-     --ha-progress) exactly cancels scroll (spacer is 100vh) and reaches identity at p=1,
-     handing off to normal reading with no jump. Gated to the active transition so reading
-     afterward is fully unclipped/untransformed. */
-  html[data-ha-active] .ha-stage > #about {
-    transform: translateY(calc((1 - var(--ha-progress, 0)) * -100vh));
-    clip-path: inset(0 0 0 calc(var(--ha-seam, 1) * 100%));
-    will-change: transform, clip-path;
+  html[data-ha-phase='about'] .ha-stage > .hero {
+    clip-path: inset(0 100% 0 0);
+    visibility: hidden;
   }
+
+  /* About: held perfectly still during the wipe via position:fixed — pinned by the
+     browser compositor (no main-thread JS), so it cannot jitter against the scroll the
+     way a transform-based counter-scroll does. top:45vh matches its natural arrival
+     framing (the focusY 0.45 bias), so when the wipe ends and it returns to normal flow
+     the position is identical → no jump. Clip lives on the full-bleed section so about's
+     left edge meets hero's right edge exactly at the brush seam (--ha-seam). */
+  html[data-ha-active] .ha-stage > #about {
+    position: fixed;
+    top: 45vh;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    clip-path: inset(0 0 0 calc(var(--ha-seam, 1) * 100%));
+  }
+  html[data-ha-phase='about'] .ha-stage > #about {
+    clip-path: none;
+  }
+  /* While About is fixed (out of flow) this placeholder holds its space so the page
+     height stays constant and the flow handoff has nothing to jump over. */
+  .ha-about-spacer { height: 0; }
+  html[data-ha-active] .ha-about-spacer { height: var(--about-h, 0px); }
 
   /* Dark ink wash backdrop fades in/out as a whole, scroll-linked, decoupled from the
      brush. Outside the transition it reverts to the theme-driven crossfade (0 at hero,
@@ -332,8 +347,11 @@ a { color: inherit; }
 
 /* Reduced motion: drop the wipe entirely, fall back to normal vertical flow. */
 @media (prefers-reduced-motion: reduce) and (min-width: 721px) and ((hover: hover) or (pointer: fine)) {
-  .ha-stage > .hero { position: static; clip-path: none; }
-  html[data-ha-active] .ha-stage > #about { transform: none; clip-path: none; }
+  .ha-stage > .hero { position: static; }
+  html[data-ha-phase='wipe'] .ha-stage > .hero { clip-path: none; }
+  html[data-ha-phase='about'] .ha-stage > .hero { clip-path: none; visibility: visible; }
+  html[data-ha-active] .ha-stage > #about { position: static; clip-path: none; }
+  .ha-about-spacer { display: none; }
 }
 
 /* ───── BRUSH-AWARE SECTION LAYOUTS ─────

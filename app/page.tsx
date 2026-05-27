@@ -20,6 +20,7 @@ export default function Page() {
           <Hero />
           <Transition from="hero" to="about" />
           <About />
+          <div className="ha-about-spacer" aria-hidden="true" />
         </div>
         <Transition from="about" to="events" />
         <Events />
