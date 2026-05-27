@@ -641,7 +641,8 @@ a { color: inherit; }
     min-height: unset;
     height: calc(100svh - var(--nav-h, 74px));
     overflow: hidden;
-    padding-top: clamp(32px, 5vh, 72px);
+    align-content: center;
+    padding-top: clamp(16px, 3vh, 44px);
     padding-bottom: clamp(32px, 5vh, 72px);
   }
   .hero__title { font-size: clamp(56px, 9vw, 130px); }
